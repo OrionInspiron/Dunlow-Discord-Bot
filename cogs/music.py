@@ -196,7 +196,7 @@ class Music(commands.Cog):
                 return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
 
             if isinstance(tracks, wavelink.Playlist):
-                added = tracks.tracks
+                added = list(tracks)
                 
                 # Filter out duplicates within the playlist and those already in queue
                 existing_uris = set()
@@ -223,7 +223,10 @@ class Music(commands.Cog):
                 
                 skipped = len(added) - len(unique_tracks)
                 skipped_msg = f" (Skipped {skipped} duplicates)" if skipped > 0 else ""
-                await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{tracks.name}** ({len(unique_tracks)} new tracks) to the queue.{skipped_msg}", discord.Color.green()))
+                
+                # Wavelink 3 Playlist doesn't have a name attribute, so we just say "A playlist"
+                playlist_name = getattr(tracks, "name", "A playlist")
+                await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{playlist_name}** ({len(unique_tracks)} new tracks) to the queue.{skipped_msg}", discord.Color.green()))
             else:
                 track = tracks[0]
                 
