@@ -17,5 +17,5 @@ async def run_server():
     print(f"Web server started on port {port}")
 
 def start_server():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     loop.create_task(run_server())
