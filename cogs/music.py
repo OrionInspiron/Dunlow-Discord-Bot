@@ -62,6 +62,9 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
+        self.bot.loop.create_task(self.start_nodes())
+
+    async def start_nodes(self):
         # Primary Node
         node_uri = os.getenv("LAVALINK_URI", "https://lavalinkv4.serenetia.com:443")
         node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
