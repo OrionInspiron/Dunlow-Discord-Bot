@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from aiohttp import web
 import asyncio
 

@@ -128,11 +128,13 @@ class Music(commands.Cog):
         player = payload.player
         if not player:
             return
+
+        # Wavelink 3 natively plays the next song from the queue.
+        # We only need to handle disconnecting when the queue is completely finished.
+        if payload.reason != "FINISHED":
+            return
             
-        if not player.queue.is_empty:
-            next_track = player.queue.get()
-            await player.play(next_track)
-        else:
+        if player.queue.is_empty:
             # Check 24/7 mode
             is_247 = getattr(player, "stay_connected", True)
             if not is_247:
