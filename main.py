@@ -27,6 +27,8 @@ class Bot(commands.Bot):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("------")
 
+from keep_alive import start_server
+
 async def main():
     bot = Bot()
     discord_token = os.getenv("DISCORD_TOKEN")
@@ -34,6 +36,9 @@ async def main():
     if not discord_token or discord_token == "your_discord_bot_token_here":
         print("Please provide a valid DISCORD_TOKEN in the .env file.")
         return
+
+    # Start the dummy web server
+    start_server()
 
     async with bot:
         await bot.start(discord_token)
