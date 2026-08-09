@@ -62,12 +62,28 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        # Primary Node (Public)
+        # Primary Node
         node_uri = os.getenv("LAVALINK_URI", "https://lavalinkv4.serenetia.com:443")
         node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
         node1 = wavelink.Node(uri=node_uri, password=node_password)
+
+        # Fallback Node 1 (Public)
+        node2 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_2", "https://lavalink.oops.wtf:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "www.freelavalink.ga")
+        )
+
+        # Fallback Node 2 (Public)
+        node3 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_3", "http://lava.link:80"), 
+            password=os.getenv("LAVALINK_PASSWORD_3", "Corite")
+        )
         
-        await wavelink.Pool.connect(nodes=[node1], client=self.bot, cache_capacity=100)
+        # Wavelink will automatically switch to the next available node if one fails/crashes!
+        try:
+            await wavelink.Pool.connect(nodes=[node1, node2, node3], client=self.bot, cache_capacity=100)
+        except Exception as e:
+            print(f"Failed to connect to one or more nodes: {e}")
 
     def create_embed(self, title, description="", color=discord.Color.blurple()):
         return discord.Embed(title=title, description=description, color=color)
