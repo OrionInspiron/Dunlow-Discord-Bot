@@ -10,6 +10,7 @@ import wavelink
 # pyrefly: ignore [missing-import]
 import yt_dlp
 import asyncio
+# pyrefly: ignore [missing-import]
 import aiohttp
 import urllib.parse
 # pyrefly: ignore [missing-import]
@@ -164,7 +165,8 @@ class Music(commands.Cog):
         player = ctx.guild.voice_client
 
         if not player:
-            await vc.connect(cls=wavelink.Player)
+            player = await vc.connect(cls=wavelink.Player)
+            player.autoplay = wavelink.AutoPlayMode.partial
             await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
         elif player.channel.id != vc.id:
             await player.move_to(vc)
@@ -183,6 +185,7 @@ class Music(commands.Cog):
             
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
+                player.autoplay = wavelink.AutoPlayMode.partial
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
 
