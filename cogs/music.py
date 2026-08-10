@@ -59,6 +59,91 @@ class QueuePaginationView(discord.ui.View):
         self.update_buttons()
         await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
+class PlayerUI(discord.ui.View):
+    def __init__(self, music_cog):
+        super().__init__(timeout=None)
+        self.music_cog = music_cog
+
+    @discord.ui.button(label="⏯️ Play/Pause", style=discord.ButtonStyle.primary, custom_id="music_play_pause")
+    async def play_pause(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        await player.pause(not player.paused)
+        status = "Paused" if player.paused else "Resumed"
+        await interaction.response.send_message(f"**{status}** the music.", ephemeral=True)
+
+    @discord.ui.button(label="⏭️ Skip", style=discord.ButtonStyle.secondary, custom_id="music_skip")
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player or not getattr(player, "playing", False):
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        if not interaction.user.voice or interaction.user.voice.channel != player.channel:
+            return await interaction.response.send_message("You must be in the same voice channel to skip.", ephemeral=True)
+
+        import time
+        import math
+        last_skip = self.music_cog.last_skip.get(interaction.guild.id, 0)
+        if time.time() - last_skip < 4.0:
+            return await interaction.response.send_message("⏳ The server is currently buffering the next song. Please wait!", ephemeral=True)
+
+        members = [m for m in player.channel.members if not m.bot]
+        required_votes = math.ceil(len(members) / 2)
+
+        is_dj = any(role.name.lower() == "dj" for role in interaction.user.roles)
+        
+        if len(members) <= 1 or interaction.user.guild_permissions.manage_channels or is_dj:
+            self.music_cog.last_skip[interaction.guild.id] = time.time()
+            await player.skip(force=True)
+            return await interaction.response.send_message("⏭️ Force-skipped the track.", ephemeral=False)
+
+        if interaction.guild.id not in self.music_cog.skip_votes:
+            self.music_cog.skip_votes[interaction.guild.id] = set()
+
+        if interaction.user.id in self.music_cog.skip_votes[interaction.guild.id]:
+            return await interaction.response.send_message(f"You have already voted to skip! ({len(self.music_cog.skip_votes[interaction.guild.id])}/{required_votes} votes needed)", ephemeral=True)
+
+        self.music_cog.skip_votes[interaction.guild.id].add(interaction.user.id)
+        current_votes = len(self.music_cog.skip_votes[interaction.guild.id])
+
+        if current_votes >= required_votes:
+            self.music_cog.skip_votes[interaction.guild.id].clear()
+            self.music_cog.last_skip[interaction.guild.id] = time.time()
+            await player.skip(force=True)
+            await interaction.response.send_message(f"⏭️ Vote passed ({current_votes}/{required_votes}). Skipped the track!", ephemeral=False)
+        else:
+            await interaction.response.send_message(f"🗳️ {interaction.user.mention} voted to skip! ({current_votes}/{required_votes} votes needed)", ephemeral=False)
+
+    @discord.ui.button(label="🔁 Loop", style=discord.ButtonStyle.secondary, custom_id="music_loop")
+    async def loop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        if player.queue.mode == wavelink.QueueMode.loop:
+            player.queue.mode = wavelink.QueueMode.normal
+            await interaction.response.send_message("🔁 Loop **Disabled**.", ephemeral=True)
+        else:
+            player.queue.mode = wavelink.QueueMode.loop
+            await interaction.response.send_message("🔁 Loop **Enabled**.", ephemeral=True)
+            
+    @discord.ui.button(label="⏹️ Stop", style=discord.ButtonStyle.danger, custom_id="music_stop")
+    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        is_dj = any(role.name.lower() == "dj" for role in interaction.user.roles)
+        if not (interaction.user.guild_permissions.manage_channels or is_dj):
+            return await interaction.response.send_message("You need 'Manage Channels' permissions or a 'DJ' role to stop the player.", ephemeral=True)
+            
+        self.music_cog.intentional_leaves.add(interaction.guild.id)
+        player.queue.clear()
+        await player.disconnect()
+        await interaction.response.send_message("⏹️ Stopped the music and cleared the queue.", ephemeral=False)
+
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -67,6 +152,7 @@ class Music(commands.Cog):
         self.skip_votes = {} # guild_id -> set(user_ids)
         self.last_skip = {} # guild_id -> timestamp
         self.rejoin_attempts = {} # guild_id -> list of timestamps
+        self.ui_messages = {} # guild_id -> discord.Message
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
@@ -213,7 +299,7 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         player = payload.player
-        if not player or not hasattr(player, "text_channel"):
+        if not player or not hasattr(player, "text_channel") or not player.text_channel:
             return
             
         # Reset skip votes for the new track
@@ -228,7 +314,18 @@ class Music(commands.Cog):
             minutes, seconds = divmod(track.length // 1000, 60)
             embed.add_field(name="Duration", value=f"{minutes}:{seconds:02d}", inline=True)
             
-        await player.text_channel.send(embed=embed)
+        # Delete old UI message
+        old_msg = self.ui_messages.get(player.guild.id)
+        if old_msg:
+            try:
+                await old_msg.delete()
+            except Exception:
+                pass
+                
+        # Send new UI
+        view = PlayerUI(self)
+        msg = await player.text_channel.send(embed=embed, view=view)
+        self.ui_messages[player.guild.id] = msg
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
