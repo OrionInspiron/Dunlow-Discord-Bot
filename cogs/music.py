@@ -241,14 +241,33 @@ class Music(commands.Cog):
         if payload.reason != "FINISHED":
             return
             
-        if player.queue.is_empty:
-            # Check 24/7 mode
-            is_247 = self.stay_connected.get(player.guild.id, True)
-            if not is_247:
-                self.intentional_leaves.add(player.guild.id)
+        is_247 = self.stay_connected.get(player.guild.id, True)
+        if not is_247 and player.queue.is_empty:
+            await asyncio.sleep(5) # Wait 5s before leaving to ensure no new songs were added
+            if player.queue.is_empty and not player.playing:
                 await player.disconnect()
                 if hasattr(player, "text_channel"):
-                    await player.text_channel.send(embed=self.create_embed("👋 Disconnected", "The queue is empty, so I have left the channel."))
+                    await player.text_channel.send(embed=self.create_embed("👋 Disconnected", "Queue is empty. Use `f#247` to make me stay forever!"))
+
+    @commands.Cog.listener()
+    async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
+        print(f"Node {payload.node.identifier} disconnected. Attempting Failover Memory restoration...")
+        
+        for vc in self.bot.voice_clients:
+            if isinstance(vc, wavelink.Player):
+                # If the player was interrupted and stopped playing, but still has a current track
+                if vc.current and not vc.playing:
+                    try:
+                        print(f"Restoring {vc.current.title} at {vc.position}ms for guild {vc.guild.id}")
+                        await asyncio.sleep(3) # Give wavelink a moment to move to the fallback node
+                        
+                        # Resume exactly where it left off!
+                        await vc.play(vc.current, start=vc.position)
+                        
+                        if hasattr(vc, "text_channel") and vc.text_channel:
+                            await vc.text_channel.send(embed=self.create_embed("🔄 Node Failover", f"The music server crashed! Automatically restored playback of **{vc.current.title}**.", discord.Color.gold()))
+                    except Exception as e:
+                        print(f"Failover restoration failed: {e}")
 
     @commands.command(name="247", help="Toggles 24/7 mode (stay in channel when queue is empty).")
     async def toggle_247(self, ctx):
