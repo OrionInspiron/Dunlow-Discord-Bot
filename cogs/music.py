@@ -112,10 +112,25 @@ class Music(commands.Cog):
             uri=os.getenv("LAVALINK_URI_8", "https://lava.freelavalink.gq:443"), 
             password=os.getenv("LAVALINK_PASSWORD_8", "freelavalink.gq")
         )
+
+        # Fallback Nodes 8 to 19 (Placeholders - Replace with real servers or your own nodes)
+        node9 = wavelink.Node(uri=os.getenv("LAVALINK_URI_9", "https://node9.example.com"), password=os.getenv("LAVALINK_PASSWORD_9", "youshallnotpass"))
+        node10 = wavelink.Node(uri=os.getenv("LAVALINK_URI_10", "https://node10.example.com"), password=os.getenv("LAVALINK_PASSWORD_10", "youshallnotpass"))
+        node11 = wavelink.Node(uri=os.getenv("LAVALINK_URI_11", "https://node11.example.com"), password=os.getenv("LAVALINK_PASSWORD_11", "youshallnotpass"))
+        node12 = wavelink.Node(uri=os.getenv("LAVALINK_URI_12", "https://node12.example.com"), password=os.getenv("LAVALINK_PASSWORD_12", "youshallnotpass"))
+        node13 = wavelink.Node(uri=os.getenv("LAVALINK_URI_13", "https://node13.example.com"), password=os.getenv("LAVALINK_PASSWORD_13", "youshallnotpass"))
+        node14 = wavelink.Node(uri=os.getenv("LAVALINK_URI_14", "https://node14.example.com"), password=os.getenv("LAVALINK_PASSWORD_14", "youshallnotpass"))
+        node15 = wavelink.Node(uri=os.getenv("LAVALINK_URI_15", "https://node15.example.com"), password=os.getenv("LAVALINK_PASSWORD_15", "youshallnotpass"))
+        node16 = wavelink.Node(uri=os.getenv("LAVALINK_URI_16", "https://node16.example.com"), password=os.getenv("LAVALINK_PASSWORD_16", "youshallnotpass"))
+        node17 = wavelink.Node(uri=os.getenv("LAVALINK_URI_17", "https://node17.example.com"), password=os.getenv("LAVALINK_PASSWORD_17", "youshallnotpass"))
+        node18 = wavelink.Node(uri=os.getenv("LAVALINK_URI_18", "https://node18.example.com"), password=os.getenv("LAVALINK_PASSWORD_18", "youshallnotpass"))
+        node19 = wavelink.Node(uri=os.getenv("LAVALINK_URI_19", "https://node19.example.com"), password=os.getenv("LAVALINK_PASSWORD_19", "youshallnotpass"))
+        node20 = wavelink.Node(uri=os.getenv("LAVALINK_URI_20", "https://node20.example.com"), password=os.getenv("LAVALINK_PASSWORD_20", "youshallnotpass"))
         
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            await wavelink.Pool.connect(nodes=[node1, node2, node3, node4, node5, node6, node7, node8], client=self.bot, cache_capacity=100)
+            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14, node15, node16, node17, node18, node19, node20]
+            await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
 
