@@ -94,10 +94,28 @@ class Music(commands.Cog):
             uri=os.getenv("LAVALINK_URI_5", "https://lavalink.ahri.dev:443"), 
             password=os.getenv("LAVALINK_PASSWORD_5", "ahridev")
         )
+
+        # Fallback Node 5
+        node6 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_6", "https://v4.lavalink.info:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_6", "youshallnotpass")
+        )
+
+        # Fallback Node 6
+        node7 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_7", "https://lavalink.lexnet.cc:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_7", "youshallnotpass")
+        )
+
+        # Fallback Node 7
+        node8 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_8", "https://lava.freelavalink.gq:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_8", "freelavalink.gq")
+        )
         
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            await wavelink.Pool.connect(nodes=[node1, node2, node3, node4, node5], client=self.bot, cache_capacity=100)
+            await wavelink.Pool.connect(nodes=[node1, node2, node3, node4, node5, node6, node7, node8], client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
 
