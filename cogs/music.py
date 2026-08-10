@@ -303,11 +303,13 @@ class Music(commands.Cog):
                     await ctx.send(embed=embed)
                 
         except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
             error_msg = str(e) or type(e).__name__
             if "502" in error_msg or "500" in error_msg or "text/html" in error_msg:
                 await ctx.send(embed=self.create_embed("⚠️ Server Overloaded", "The public music servers are currently experiencing heavy traffic and rejected the request. Please try playing the song again in a few seconds!", discord.Color.gold()))
             else:
-                await ctx.send(embed=self.create_embed("❌ Error", f"An error occurred while trying to play: {error_msg}", discord.Color.red()))
+                await ctx.send(embed=self.create_embed("❌ Error Debug", f"Error: {error_msg}\n```py\n{tb[:3000]}\n```", discord.Color.red()))
             print(f"Error in play command: {repr(e)}")
 
     @commands.command(name="nowplaying", help="Shows the currently playing track.", aliases=['np'])
