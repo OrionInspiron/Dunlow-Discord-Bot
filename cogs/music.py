@@ -66,6 +66,7 @@ class Music(commands.Cog):
         self.intentional_leaves = set() # guild_ids that were explicitly told to leave
         self.skip_votes = {} # guild_id -> set(user_ids)
         self.last_skip = {} # guild_id -> timestamp
+        self.rejoin_attempts = {} # guild_id -> list of timestamps
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
@@ -159,6 +160,26 @@ class Music(commands.Cog):
             # If 24/7 mode is enabled, forcefully rejoin!
             is_247 = self.stay_connected.get(member.guild.id, True)
             if is_247:
+                import time
+                now = time.time()
+                attempts = self.rejoin_attempts.get(member.guild.id, [])
+                attempts = [t for t in attempts if now - t < 20] # Keep last 20 seconds
+                
+                if len(attempts) >= 3:
+                    self.stay_connected[member.guild.id] = False
+                    self.rejoin_attempts[member.guild.id] = []
+                    channel = self.bot.get_channel(before.channel.id)
+                    if channel and hasattr(channel, "guild"):
+                        # Try to send a message to the first text channel we can find if it's a loop
+                        for txt in channel.guild.text_channels:
+                            if txt.permissions_for(channel.guild.me).send_messages:
+                                await txt.send(embed=self.create_embed("⚠️ Loop Detected", "I was kicked or disconnected too many times in a row. 24/7 mode has been temporarily disabled.", discord.Color.red()))
+                                break
+                    return
+                
+                attempts.append(now)
+                self.rejoin_attempts[member.guild.id] = attempts
+                
                 try:
                     # Give discord a tiny moment to clean up the old ghost connection
                     await asyncio.sleep(2)
