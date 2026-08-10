@@ -967,7 +967,7 @@ class Music(commands.Cog):
 
     @commands.group(name="filter", invoke_without_command=True)
     async def filter(self, ctx):
-        await ctx.send(embed=self.create_embed("🎛️ Filter Commands", "Use `f#filter bassboost <level>`, `f#filter nightcore`, `f#filter vaporwave`, or `f#filter reset`.", discord.Color.gold()))
+        await ctx.send(embed=self.create_embed("🎛️ Filter Commands", "Use `f#filter bassboost <level>`, `f#filter nightcore`, `f#filter vaporwave`, `f#filter karaoke`, or `f#filter reset`.", discord.Color.gold()))
 
     @filter.command(name="bassboost", help="Applies a bassboost filter (level 0 to 100).")
     async def filter_bassboost(self, ctx, level: int = 50):
@@ -1009,6 +1009,40 @@ class Music(commands.Cog):
         filters.timescale.set(pitch=0.8, speed=0.8, rate=1.0)
         await player.set_filters(filters)
         await ctx.send(embed=self.create_embed("🎛️ Vaporwave", "Applied Vaporwave filter! Ａｅｓｔｈｅｔｉｃ", discord.Color.teal()))
+
+    @filter.command(name="karaoke", help="Applies a karaoke filter and retrieves lyrics.")
+    async def filter_karaoke(self, ctx):
+        player = ctx.guild.voice_client
+        if not player or not player.playing:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        filters: wavelink.Filters = player.filters
+        filters.karaoke.set(level=1.0, mono_level=1.0, filter_band=220.0, filter_width=100.0)
+        await player.set_filters(filters)
+        
+        track = player.current
+        title = track.title if track else ""
+        artist = track.author if track else ""
+        
+        headers = {"User-Agent": "FemboysBot/1.0 (Discord Music Bot)"}
+        params = {"track_name": title, "artist_name": artist}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://lrclib.net/api/get", params=params, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    lyrics = data.get("plainLyrics")
+                    if lyrics:
+                        if len(lyrics) > 4096:
+                            lyrics = lyrics[:4093] + "..."
+                        embed = discord.Embed(title=f"🎤 Karaoke: {title}", description=lyrics, color=discord.Color.blue())
+                        if artist:
+                            embed.set_author(name=artist)
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(embed=self.create_embed("🎤 Karaoke", "Karaoke mode activated, but no lyrics were found.", discord.Color.blue()))
+                else:
+                    await ctx.send(embed=self.create_embed("🎤 Karaoke", "Karaoke mode activated, but no lyrics were found.", discord.Color.blue()))
 
     @filter.command(name="reset", help="Resets all audio filters.")
     async def filter_reset(self, ctx):
