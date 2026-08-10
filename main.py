@@ -1,7 +1,10 @@
 import os
 import asyncio
+# pyrefly: ignore [missing-import]
 import discord
+# pyrefly: ignore [missing-import]
 from discord.ext import commands
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 load_dotenv()

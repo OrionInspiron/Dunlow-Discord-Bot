@@ -262,12 +262,15 @@ class Music(commands.Cog):
                 if not unique_tracks:
                     return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", "All songs from this playlist are already in your queue!", discord.Color.gold()))
 
-                for t in unique_tracks:
-                    player.queue.put(t)
-                
+                # If idle, play the first track explicitly and queue the rest
                 if not player.playing:
                     await player.set_volume(30)
-                    await player.play(player.queue.get())
+                    await player.play(unique_tracks[0])
+                    for t in unique_tracks[1:]:
+                        player.queue.put(t)
+                else:
+                    for t in unique_tracks:
+                        player.queue.put(t)
                 
                 skipped = len(added) - len(unique_tracks)
                 skipped_msg = f" (Skipped {skipped} duplicates)" if skipped > 0 else ""
@@ -291,12 +294,11 @@ class Music(commands.Cog):
                 if is_duplicate:
                     return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", f"The song **{track.title}** is already in your queue! You can use `f#skipto {track.title}` to play that song.", discord.Color.gold()))
 
-                player.queue.put(track)
-                
                 if not player.playing:
                     await player.set_volume(30)
-                    await player.play(player.queue.get())
+                    await player.play(track)
                 else:
+                    player.queue.put(track)
                     embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
                     await ctx.send(embed=embed)
                 
