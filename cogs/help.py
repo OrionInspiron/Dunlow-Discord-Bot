@@ -33,18 +33,45 @@ class HelpCog(commands.Cog):
 
     @commands.command(name="help", help="Shows this help message.")
     async def help_command(self, ctx):
-        cogs = self.bot.cogs
+        friendly_descriptions = {
+            "247": "Keeps the bot in the voice channel 24/7, even when no music is playing.",
+            "join": "Summons the bot into your current voice channel.",
+            "play": "Plays a song! Just type a song name or paste a link.",
+            "nowplaying": "Shows the song that is currently playing.",
+            "skip": "Skips the current song and plays the next one.",
+            "pause": "Pauses the music.",
+            "resume": "Resumes playing the paused music.",
+            "shuffle": "Mixes up all the songs in your queue randomly.",
+            "loop": "Changes the loop mode (Loop off -> Loop song -> Loop entire queue).",
+            "clear": "Removes all songs from the queue.",
+            "remove": "Removes a specific song from the queue using its number.",
+            "seek": "Jumps to a specific time in the song (e.g., 60 for 1 minute).",
+            "replay": "Restarts the current song from the very beginning.",
+            "forward": "Jumps forward in the song by the amount of seconds you specify.",
+            "rewind": "Jumps backward in the song by the amount of seconds you specify.",
+            "stop": "Stops the music entirely and clears everything out.",
+            "queue": "Shows you the list of upcoming songs.",
+            "skipto": "Skips directly to a specific song number or name in the queue.",
+            "volume": "Turns the music volume up or down (1-100).",
+            "lyrics": "Searches for the lyrics of the currently playing song.",
+            "playlist": "Commands to manage your personal playlists.",
+            "save": "Saves everything in the queue to a personal playlist you can play later.",
+            "list": "Shows you a list of all the personal playlists you have saved.",
+            "filter": "Fun audio effects you can apply to the music.",
+            "bassboost": "Turns up the bass! You can set the level from 0 to 100.",
+            "nightcore": "Speeds up the song and raises the pitch for a Nightcore vibe.",
+            "vaporwave": "Slows down the song and lowers the pitch for a chill Vaporwave aesthetic.",
+            "reset": "Turns off all audio filters and returns the song to normal.",
+            "help": "Shows this helpful guide to all the bot's commands!"
+        }
+
         commands_list = []
-        
-        # Gather all commands
-        for command in self.bot.commands:
+        for command in self.bot.walk_commands():
             if not command.hidden:
                 commands_list.append(command)
                 
-        # Sort by name
-        commands_list.sort(key=lambda x: x.name)
+        commands_list.sort(key=lambda x: x.qualified_name)
         
-        # Paginate commands (6 per page)
         per_page = 6
         chunks = [commands_list[i:i + per_page] for i in range(0, len(commands_list), per_page)]
         
@@ -52,20 +79,23 @@ class HelpCog(commands.Cog):
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(
                 title=f"📚 Bot Commands (Page {i+1}/{len(chunks)})",
-                description="Here is a list of all available commands:",
+                description="Here is a list of all available commands in easy-to-understand language:",
                 color=discord.Color.blurple()
             )
             
             for cmd in chunk:
-                # Format aliases if any
                 aliases = f" (Aliases: {', '.join(cmd.aliases)})" if cmd.aliases else ""
                 
-                # Format usage
-                usage = f"`f#{cmd.name} {cmd.signature}`"
+                # Format usage with parent command if it exists
+                parent = f"{cmd.parent.name} " if cmd.parent else ""
+                usage = f"`f#{parent}{cmd.name} {cmd.signature}`".strip()
+                
+                # Check for friendly description
+                desc = friendly_descriptions.get(cmd.name, cmd.help or "No description provided.")
                 
                 embed.add_field(
-                    name=f"🔹 {cmd.name}{aliases}",
-                    value=f"**Usage:** {usage}\n**Description:** {cmd.help or 'No description provided.'}",
+                    name=f"🔹 {parent}{cmd.name}{aliases}",
+                    value=f"**Description:** {desc}\n**Usage:** {usage}",
                     inline=False
                 )
             
