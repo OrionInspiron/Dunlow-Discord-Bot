@@ -1,7 +1,7 @@
 import os
 # pyrefly: ignore [missing-import]
 import discord
-import aiosqlite
+import motor.motor_asyncio
 import json
 # pyrefly: ignore [missing-import]
 from discord.ext import commands
@@ -171,13 +171,12 @@ class Music(commands.Cog):
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
-        self.db = await aiosqlite.connect("playlists.db")
-        await self.db.execute("CREATE TABLE IF NOT EXISTS playlists (user_id INTEGER, name TEXT, tracks TEXT, PRIMARY KEY (user_id, name))")
-        await self.db.commit()
+        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URI"))
+        self.db = self.mongo_client["music_bot"]["playlists"]
 
     async def cog_unload(self):
-        if self.db:
-            await self.db.close()
+        if hasattr(self, 'mongo_client'):
+            self.mongo_client.close()
 
     async def start_nodes(self):
         # Primary Node
@@ -899,9 +898,11 @@ class Music(commands.Cog):
         for t in player.queue:
             tracks.append(t.uri)
             
-        tracks_json = json.dumps(tracks)
-        await self.db.execute("INSERT OR REPLACE INTO playlists (user_id, name, tracks) VALUES (?, ?, ?)", (ctx.author.id, name, tracks_json))
-        await self.db.commit()
+        await self.db.update_one(
+            {"user_id": ctx.author.id, "name": name},
+            {"$set": {"tracks": tracks}},
+            upsert=True
+        )
         await ctx.send(embed=self.create_embed("✅ Saved", f"Saved {len(tracks)} tracks to your playlist **{name}**!", discord.Color.green()))
 
     @playlist.command(name="play", help="Loads and plays a saved personal playlist.")
@@ -909,12 +910,11 @@ class Music(commands.Cog):
         if not ctx.author.voice:
             return await ctx.send(embed=self.create_embed("❌ Error", "You must be in a voice channel to play music.", discord.Color.red()))
             
-        async with self.db.execute("SELECT tracks FROM playlists WHERE user_id = ? AND name = ?", (ctx.author.id, name)) as cursor:
-            row = await cursor.fetchone()
-            if not row:
-                return await ctx.send(embed=self.create_embed("❌ Error", f"You don't have a playlist named **{name}**.", discord.Color.red()))
-                
-        tracks = json.loads(row[0])
+        doc = await self.db.find_one({"user_id": ctx.author.id, "name": name})
+        if not doc:
+            return await ctx.send(embed=self.create_embed("❌ Error", f"You don't have a playlist named **{name}**.", discord.Color.red()))
+            
+        tracks = doc.get("tracks", [])
         if not tracks:
             return await ctx.send(embed=self.create_embed("❌ Error", "Playlist is empty.", discord.Color.red()))
             
@@ -950,16 +950,16 @@ class Music(commands.Cog):
 
     @playlist.command(name="list", help="Lists all your saved personal playlists.")
     async def playlist_list(self, ctx):
-        async with self.db.execute("SELECT name, tracks FROM playlists WHERE user_id = ?", (ctx.author.id,)) as cursor:
-            rows = await cursor.fetchall()
+        cursor = self.db.find({"user_id": ctx.author.id})
+        docs = await cursor.to_list(length=None)
             
-        if not rows:
+        if not docs:
             return await ctx.send(embed=self.create_embed("❌ Error", "You don't have any saved playlists yet.", discord.Color.red()))
             
         embed = self.create_embed("📚 Your Playlists")
-        for row in rows:
-            pname = row[0]
-            tracks_list = json.loads(row[1])
+        for doc in docs:
+            pname = doc.get("name", "Unknown")
+            tracks_list = doc.get("tracks", [])
             embed.add_field(name=f"🎵 {pname}", value=f"{len(tracks_list)} tracks", inline=False)
             
         await ctx.send(embed=embed)
