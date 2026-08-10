@@ -883,14 +883,15 @@ class Music(commands.Cog):
                 print(f"Error fetching lyrics: {e}")
                 await ctx.send(embed=self.create_embed("❌ Error", "An error occurred while fetching the lyrics.", discord.Color.red()))
 
-    playlist = app_commands.Group(name="playlist", description="Personal playlist commands")
+    @commands.group(name="playlist", invoke_without_command=True)
+    async def playlist(self, ctx):
+        await ctx.send(embed=self.create_embed("📚 Playlist Commands", "Use `f#playlist save <name>`, `f#playlist play <name>`, or `f#playlist list`.", discord.Color.gold()))
 
-    @playlist.command(name="save", description="Saves the current queue as a personal playlist.")
-    @app_commands.describe(name="The name of the playlist to save.")
-    async def playlist_save(self, interaction: discord.Interaction, name: str):
-        player = interaction.guild.voice_client
+    @playlist.command(name="save", help="Saves the current queue as a personal playlist.")
+    async def playlist_save(self, ctx, *, name: str):
+        player = ctx.guild.voice_client
         if not player or (not player.playing and player.queue.is_empty):
-            return await interaction.response.send_message("The queue is empty! Play some songs first before saving.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "The queue is empty! Play some songs first before saving.", discord.Color.red()))
             
         tracks = []
         if player.current:
@@ -899,80 +900,79 @@ class Music(commands.Cog):
             tracks.append(t.uri)
             
         tracks_json = json.dumps(tracks)
-        await self.db.execute("INSERT OR REPLACE INTO playlists (user_id, name, tracks) VALUES (?, ?, ?)", (interaction.user.id, name, tracks_json))
+        await self.db.execute("INSERT OR REPLACE INTO playlists (user_id, name, tracks) VALUES (?, ?, ?)", (ctx.author.id, name, tracks_json))
         await self.db.commit()
-        await interaction.response.send_message(f"✅ Saved {len(tracks)} tracks to your playlist **{name}**!", ephemeral=False)
+        await ctx.send(embed=self.create_embed("✅ Saved", f"Saved {len(tracks)} tracks to your playlist **{name}**!", discord.Color.green()))
 
-    @playlist.command(name="play", description="Loads and plays a saved personal playlist.")
-    @app_commands.describe(name="The name of the playlist to play.")
-    async def playlist_play(self, interaction: discord.Interaction, name: str):
-        if not interaction.user.voice:
-            return await interaction.response.send_message("You must be in a voice channel to play music.", ephemeral=True)
+    @playlist.command(name="play", help="Loads and plays a saved personal playlist.")
+    async def playlist_play(self, ctx, *, name: str):
+        if not ctx.author.voice:
+            return await ctx.send(embed=self.create_embed("❌ Error", "You must be in a voice channel to play music.", discord.Color.red()))
             
-        async with self.db.execute("SELECT tracks FROM playlists WHERE user_id = ? AND name = ?", (interaction.user.id, name)) as cursor:
+        async with self.db.execute("SELECT tracks FROM playlists WHERE user_id = ? AND name = ?", (ctx.author.id, name)) as cursor:
             row = await cursor.fetchone()
             if not row:
-                return await interaction.response.send_message(f"❌ You don't have a playlist named **{name}**.", ephemeral=True)
+                return await ctx.send(embed=self.create_embed("❌ Error", f"You don't have a playlist named **{name}**.", discord.Color.red()))
                 
         tracks = json.loads(row[0])
         if not tracks:
-            return await interaction.response.send_message("Playlist is empty.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "Playlist is empty.", discord.Color.red()))
             
-        vc = interaction.user.voice.channel
-        player = interaction.guild.voice_client
+        vc = ctx.author.voice.channel
+        player = ctx.guild.voice_client
         
-        await interaction.response.defer()
-        
-        if not player:
-            player = await vc.connect(cls=wavelink.Player)
-            player.autoplay = wavelink.AutoPlayMode.enabled
-            player.inactive_timeout = 0
-            player.inactive_channel_tokens = 0
-            await self.setup_sponsorblock(player)
-            player.text_channel = interaction.channel
-        elif player.channel.id != vc.id:
-            await player.move_to(vc)
-            
-        added = 0
-        for uri in tracks:
-            results = await wavelink.Playable.search(uri)
-            if results:
-                if isinstance(results, wavelink.Playlist):
-                    player.queue.put(results[0])
-                else:
-                    player.queue.put(results[0])
-                added += 1
+        async with ctx.typing():
+            if not player:
+                player = await vc.connect(cls=wavelink.Player)
+                player.autoplay = wavelink.AutoPlayMode.enabled
+                player.inactive_timeout = 0
+                player.inactive_channel_tokens = 0
+                await self.setup_sponsorblock(player)
+                player.text_channel = ctx.channel
+            elif player.channel.id != vc.id:
+                await player.move_to(vc)
                 
-        if not player.playing and not player.queue.is_empty:
-            await player.set_volume(30)
-            await player.play(player.queue.get())
-            
-        await interaction.followup.send(f"✅ Loaded {added} tracks from **{name}** into the queue!")
+            added = 0
+            for uri in tracks:
+                results = await wavelink.Playable.search(uri)
+                if results:
+                    if isinstance(results, wavelink.Playlist):
+                        player.queue.put(results[0])
+                    else:
+                        player.queue.put(results[0])
+                    added += 1
+                    
+            if not player.playing and not player.queue.is_empty:
+                await player.set_volume(30)
+                await player.play(player.queue.get())
+                
+        await ctx.send(embed=self.create_embed("✅ Loaded", f"Loaded {added} tracks from **{name}** into the queue!", discord.Color.green()))
 
-    @playlist.command(name="list", description="Lists all your saved personal playlists.")
-    async def playlist_list(self, interaction: discord.Interaction):
-        async with self.db.execute("SELECT name, tracks FROM playlists WHERE user_id = ?", (interaction.user.id,)) as cursor:
+    @playlist.command(name="list", help="Lists all your saved personal playlists.")
+    async def playlist_list(self, ctx):
+        async with self.db.execute("SELECT name, tracks FROM playlists WHERE user_id = ?", (ctx.author.id,)) as cursor:
             rows = await cursor.fetchall()
             
         if not rows:
-            return await interaction.response.send_message("You don't have any saved playlists yet.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "You don't have any saved playlists yet.", discord.Color.red()))
             
         embed = self.create_embed("📚 Your Playlists")
         for row in rows:
-            name = row[0]
+            pname = row[0]
             tracks_list = json.loads(row[1])
-            embed.add_field(name=f"🎵 {name}", value=f"{len(tracks_list)} tracks", inline=False)
+            embed.add_field(name=f"🎵 {pname}", value=f"{len(tracks_list)} tracks", inline=False)
             
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await ctx.send(embed=embed)
 
-    filter = app_commands.Group(name="filter", description="Audio filter commands")
+    @commands.group(name="filter", invoke_without_command=True)
+    async def filter(self, ctx):
+        await ctx.send(embed=self.create_embed("🎛️ Filter Commands", "Use `f#filter bassboost <level>`, `f#filter nightcore`, `f#filter vaporwave`, or `f#filter reset`.", discord.Color.gold()))
 
-    @filter.command(name="bassboost", description="Applies a bassboost filter.")
-    @app_commands.describe(level="Bassboost level from 0 to 100")
-    async def filter_bassboost(self, interaction: discord.Interaction, level: int = 50):
-        player = interaction.guild.voice_client
+    @filter.command(name="bassboost", help="Applies a bassboost filter (level 0 to 100).")
+    async def filter_bassboost(self, ctx, level: int = 50):
+        player = ctx.guild.voice_client
         if not player or not player.playing:
-            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
             
         level = max(0, min(100, level))
         gain = level / 100.0 * 1.0 # Max gain of 1.0
@@ -985,40 +985,40 @@ class Music(commands.Cog):
             wavelink.Equalizer(band=3, gain=gain * 0.25),
         ])
         await player.set_filters(filters)
-        await interaction.response.send_message(embed=self.create_embed("🎛️ Bassboost", f"Bassboost set to {level}%", discord.Color.green()))
+        await ctx.send(embed=self.create_embed("🎛️ Bassboost", f"Bassboost set to {level}%", discord.Color.green()))
 
-    @filter.command(name="nightcore", description="Applies a nightcore filter (pitch and speed up).")
-    async def filter_nightcore(self, interaction: discord.Interaction):
-        player = interaction.guild.voice_client
+    @filter.command(name="nightcore", help="Applies a nightcore filter (pitch and speed up).")
+    async def filter_nightcore(self, ctx):
+        player = ctx.guild.voice_client
         if not player or not player.playing:
-            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
             
         filters: wavelink.Filters = player.filters
         filters.timescale.set(pitch=1.2, speed=1.1, rate=1.0)
         await player.set_filters(filters)
-        await interaction.response.send_message(embed=self.create_embed("🎛️ Nightcore", "Applied Nightcore filter!", discord.Color.purple()))
+        await ctx.send(embed=self.create_embed("🎛️ Nightcore", "Applied Nightcore filter!", discord.Color.purple()))
 
-    @filter.command(name="vaporwave", description="Applies a vaporwave filter (slowed and reverb).")
-    async def filter_vaporwave(self, interaction: discord.Interaction):
-        player = interaction.guild.voice_client
+    @filter.command(name="vaporwave", help="Applies a vaporwave filter (slowed and reverb).")
+    async def filter_vaporwave(self, ctx):
+        player = ctx.guild.voice_client
         if not player or not player.playing:
-            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
             
         filters: wavelink.Filters = player.filters
         filters.timescale.set(pitch=0.8, speed=0.8, rate=1.0)
         await player.set_filters(filters)
-        await interaction.response.send_message(embed=self.create_embed("🎛️ Vaporwave", "Applied Vaporwave filter! Ａｅｓｔｈｅｔｉｃ", discord.Color.teal()))
+        await ctx.send(embed=self.create_embed("🎛️ Vaporwave", "Applied Vaporwave filter! Ａｅｓｔｈｅｔｉｃ", discord.Color.teal()))
 
-    @filter.command(name="reset", description="Resets all audio filters.")
-    async def filter_reset(self, interaction: discord.Interaction):
-        player = interaction.guild.voice_client
+    @filter.command(name="reset", help="Resets all audio filters.")
+    async def filter_reset(self, ctx):
+        player = ctx.guild.voice_client
         if not player:
-            return await interaction.response.send_message("The bot is not in a voice channel.", ephemeral=True)
+            return await ctx.send(embed=self.create_embed("❌ Error", "The bot is not in a voice channel.", discord.Color.red()))
             
         filters: wavelink.Filters = player.filters
         filters.reset()
         await player.set_filters(filters)
-        await interaction.response.send_message(embed=self.create_embed("🎛️ Reset", "All filters have been reset to normal.", discord.Color.green()))
+        await ctx.send(embed=self.create_embed("🎛️ Reset", "All filters have been reset to normal.", discord.Color.green()))
 
 async def setup(bot):
     await bot.add_cog(Music(bot))

@@ -21,10 +21,7 @@ class Bot(commands.Bot):
             if filename.endswith(".py"):
                 await self.load_extension(f"cogs.{filename[:-3]}")
                 print(f"Loaded extension: {filename}")
-        
-        # Sync slash commands
-        await self.tree.sync()
-        print("Slash commands synced.")
+        # Sync slash commands removed as requested
 
     async def on_ready(self):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
