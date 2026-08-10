@@ -308,6 +308,8 @@ class Music(commands.Cog):
             error_msg = str(e) or type(e).__name__
             if "502" in error_msg or "500" in error_msg or "text/html" in error_msg:
                 await ctx.send(embed=self.create_embed("⚠️ Server Overloaded", "The public music servers are currently experiencing heavy traffic and rejected the request. Please try playing the song again in a few seconds!", discord.Color.gold()))
+            elif error_msg == "None" or "LavalinkLoadException" in type(e).__name__:
+                await ctx.send(embed=self.create_embed("⚠️ YouTube Blocked", "The public music server was temporarily blocked by YouTube for requesting too many songs at once (Rate Limited). Try using a Spotify playlist instead, or wait a few minutes!", discord.Color.orange()))
             else:
                 await ctx.send(embed=self.create_embed("❌ Error Debug", f"Error: {error_msg}\n```py\n{tb[:3000]}\n```", discord.Color.red()))
             print(f"Error in play command: {repr(e)}")
