@@ -129,6 +129,18 @@ class PlayerUI(discord.ui.View):
             player.queue.mode = wavelink.QueueMode.loop
             await interaction.response.send_message("🔁 Loop **Enabled**.", ephemeral=True)
             
+    @discord.ui.button(label="🔀 Shuffle", style=discord.ButtonStyle.secondary, custom_id="music_shuffle")
+    async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        if player.queue.is_empty:
+            return await interaction.response.send_message("The queue is empty!", ephemeral=True)
+            
+        player.queue.shuffle()
+        await interaction.response.send_message("🔀 Shuffled the queue!", ephemeral=False)
+            
     @discord.ui.button(label="⏹️ Stop", style=discord.ButtonStyle.danger, custom_id="music_stop")
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = interaction.guild.voice_client
@@ -307,12 +319,23 @@ class Music(commands.Cog):
             self.skip_votes[player.guild.id].clear()
             
         track = payload.track
-        embed = discord.Embed(title="🎶 Now Playing", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
-        if track.author:
-            embed.add_field(name="Author", value=track.author, inline=True)
+        
+        # Format the duration
+        duration_str = "Live Stream"
         if track.length:
             minutes, seconds = divmod(track.length // 1000, 60)
-            embed.add_field(name="Duration", value=f"{minutes}:{seconds:02d}", inline=True)
+            duration_str = f"{minutes}:{seconds:02d}"
+            
+        # Create a premium-looking embed
+        embed = discord.Embed(
+            title="🎧 Now Playing",
+            description=f"**[{track.title}]({track.uri})**\n\n👤 **Artist:** {track.author}\n🕒 **Duration:** {duration_str}",
+            color=discord.Color.from_rgb(114, 137, 218) # Discord Blurple
+        )
+        
+        # Add artwork thumbnail if available
+        if getattr(track, "artwork", None):
+            embed.set_thumbnail(url=track.artwork)
             
         # Delete old UI message
         old_msg = self.ui_messages.get(player.guild.id)
