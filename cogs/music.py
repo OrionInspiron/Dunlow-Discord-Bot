@@ -1,6 +1,8 @@
 import os
 # pyrefly: ignore [missing-import]
 import discord
+import aiosqlite
+import json
 # pyrefly: ignore [missing-import]
 from discord.ext import commands
 # pyrefly: ignore [missing-import]
@@ -165,9 +167,17 @@ class Music(commands.Cog):
         self.last_skip = {} # guild_id -> timestamp
         self.rejoin_attempts = {} # guild_id -> list of timestamps
         self.ui_messages = {} # guild_id -> discord.Message
+        self.db = None
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
+        self.db = await aiosqlite.connect("playlists.db")
+        await self.db.execute("CREATE TABLE IF NOT EXISTS playlists (user_id INTEGER, name TEXT, tracks TEXT, PRIMARY KEY (user_id, name))")
+        await self.db.commit()
+
+    async def cog_unload(self):
+        if self.db:
+            await self.db.close()
 
     async def start_nodes(self):
         # Primary Node
@@ -872,6 +882,88 @@ class Music(commands.Cog):
             except Exception as e:
                 print(f"Error fetching lyrics: {e}")
                 await ctx.send(embed=self.create_embed("❌ Error", "An error occurred while fetching the lyrics.", discord.Color.red()))
+
+    playlist = app_commands.Group(name="playlist", description="Personal playlist commands")
+
+    @playlist.command(name="save", description="Saves the current queue as a personal playlist.")
+    @app_commands.describe(name="The name of the playlist to save.")
+    async def playlist_save(self, interaction: discord.Interaction, name: str):
+        player = interaction.guild.voice_client
+        if not player or (not player.playing and player.queue.is_empty):
+            return await interaction.response.send_message("The queue is empty! Play some songs first before saving.", ephemeral=True)
+            
+        tracks = []
+        if player.current:
+            tracks.append(player.current.uri)
+        for t in player.queue:
+            tracks.append(t.uri)
+            
+        tracks_json = json.dumps(tracks)
+        await self.db.execute("INSERT OR REPLACE INTO playlists (user_id, name, tracks) VALUES (?, ?, ?)", (interaction.user.id, name, tracks_json))
+        await self.db.commit()
+        await interaction.response.send_message(f"✅ Saved {len(tracks)} tracks to your playlist **{name}**!", ephemeral=False)
+
+    @playlist.command(name="play", description="Loads and plays a saved personal playlist.")
+    @app_commands.describe(name="The name of the playlist to play.")
+    async def playlist_play(self, interaction: discord.Interaction, name: str):
+        if not interaction.user.voice:
+            return await interaction.response.send_message("You must be in a voice channel to play music.", ephemeral=True)
+            
+        async with self.db.execute("SELECT tracks FROM playlists WHERE user_id = ? AND name = ?", (interaction.user.id, name)) as cursor:
+            row = await cursor.fetchone()
+            if not row:
+                return await interaction.response.send_message(f"❌ You don't have a playlist named **{name}**.", ephemeral=True)
+                
+        tracks = json.loads(row[0])
+        if not tracks:
+            return await interaction.response.send_message("Playlist is empty.", ephemeral=True)
+            
+        vc = interaction.user.voice.channel
+        player = interaction.guild.voice_client
+        
+        await interaction.response.defer()
+        
+        if not player:
+            player = await vc.connect(cls=wavelink.Player)
+            player.autoplay = wavelink.AutoPlayMode.enabled
+            player.inactive_timeout = 0
+            player.inactive_channel_tokens = 0
+            await self.setup_sponsorblock(player)
+            player.text_channel = interaction.channel
+        elif player.channel.id != vc.id:
+            await player.move_to(vc)
+            
+        added = 0
+        for uri in tracks:
+            results = await wavelink.Playable.search(uri)
+            if results:
+                if isinstance(results, wavelink.Playlist):
+                    player.queue.put(results[0])
+                else:
+                    player.queue.put(results[0])
+                added += 1
+                
+        if not player.playing and not player.queue.is_empty:
+            await player.set_volume(30)
+            await player.play(player.queue.get())
+            
+        await interaction.followup.send(f"✅ Loaded {added} tracks from **{name}** into the queue!")
+
+    @playlist.command(name="list", description="Lists all your saved personal playlists.")
+    async def playlist_list(self, interaction: discord.Interaction):
+        async with self.db.execute("SELECT name, tracks FROM playlists WHERE user_id = ?", (interaction.user.id,)) as cursor:
+            rows = await cursor.fetchall()
+            
+        if not rows:
+            return await interaction.response.send_message("You don't have any saved playlists yet.", ephemeral=True)
+            
+        embed = self.create_embed("📚 Your Playlists")
+        for row in rows:
+            name = row[0]
+            tracks_list = json.loads(row[1])
+            embed.add_field(name=f"🎵 {name}", value=f"{len(tracks_list)} tracks", inline=False)
+            
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
