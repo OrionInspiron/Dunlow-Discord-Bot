@@ -61,6 +61,7 @@ class HelpCog(commands.Cog):
             "bassboost": "Turns up the bass! You can set the level from 0 to 100.",
             "nightcore": "Speeds up the song and raises the pitch for a Nightcore vibe.",
             "vaporwave": "Slows down the song and lowers the pitch for a chill Vaporwave aesthetic.",
+            "karaoke": "Applies a karaoke filter and retrieves the lyrics.",
             "reset": "Turns off all audio filters and returns the song to normal.",
             "help": "Shows this helpful guide to all the bot's commands!"
         }
