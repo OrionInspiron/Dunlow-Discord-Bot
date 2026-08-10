@@ -980,10 +980,10 @@ class Music(commands.Cog):
         
         filters: wavelink.Filters = player.filters
         filters.equalizer.set(bands=[
-            wavelink.Equalizer(band=0, gain=gain),
-            wavelink.Equalizer(band=1, gain=gain * 0.75),
-            wavelink.Equalizer(band=2, gain=gain * 0.5),
-            wavelink.Equalizer(band=3, gain=gain * 0.25),
+            {"band": 0, "gain": gain},
+            {"band": 1, "gain": gain * 0.75},
+            {"band": 2, "gain": gain * 0.5},
+            {"band": 3, "gain": gain * 0.25},
         ])
         await player.set_filters(filters)
         await ctx.send(embed=self.create_embed("🎛️ Bassboost", f"Bassboost set to {level}%", discord.Color.green()))
