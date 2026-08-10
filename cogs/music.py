@@ -13,6 +13,7 @@ import asyncio
 # pyrefly: ignore [missing-import]
 import aiohttp
 import urllib.parse
+import math
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
@@ -63,6 +64,7 @@ class Music(commands.Cog):
         self.bot = bot
         self.stay_connected = {} # guild_id -> bool
         self.intentional_leaves = set() # guild_ids that were explicitly told to leave
+        self.skip_votes = {} # guild_id -> set(user_ids)
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
@@ -191,6 +193,10 @@ class Music(commands.Cog):
         player = payload.player
         if not player or not hasattr(player, "text_channel"):
             return
+            
+        # Reset skip votes for the new track
+        if player.guild.id in self.skip_votes:
+            self.skip_votes[player.guild.id].clear()
             
         track = payload.track
         embed = discord.Embed(title="🎶 Now Playing", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
@@ -366,9 +372,37 @@ class Music(commands.Cog):
         player = ctx.guild.voice_client
         if not player or not player.playing:
             return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
-        
-        await player.skip(force=True)
-        await ctx.send(embed=self.create_embed("⏭️ Skipped", "The current track has been skipped."))
+            
+        if not ctx.author.voice or ctx.author.voice.channel != player.channel:
+            return await ctx.send(embed=self.create_embed("❌ Error", "You must be in the same voice channel to skip.", discord.Color.red()))
+
+        # Get the number of real members in the voice channel
+        members = [m for m in player.channel.members if not m.bot]
+        required_votes = math.ceil(len(members) / 2)
+
+        # Allow immediate skip if:
+        # - The requester is the only real person in the channel
+        # - The requester has manage_channels permissions (Admin/DJ)
+        if len(members) <= 1 or ctx.author.guild_permissions.manage_channels:
+            await player.skip(force=True)
+            return await ctx.send(embed=self.create_embed("⏭️ Skipped", "Skipped the current track."))
+
+        # Initialize vote set for the guild if not exists
+        if ctx.guild.id not in self.skip_votes:
+            self.skip_votes[ctx.guild.id] = set()
+
+        if ctx.author.id in self.skip_votes[ctx.guild.id]:
+            return await ctx.send(embed=self.create_embed("ℹ️ Vote Recorded", f"You have already voted to skip! ({len(self.skip_votes[ctx.guild.id])}/{required_votes} votes needed)", discord.Color.gold()))
+
+        self.skip_votes[ctx.guild.id].add(ctx.author.id)
+        current_votes = len(self.skip_votes[ctx.guild.id])
+
+        if current_votes >= required_votes:
+            self.skip_votes[ctx.guild.id].clear()
+            await player.skip(force=True)
+            await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipped the current track!", discord.Color.green()))
+        else:
+            await ctx.send(embed=self.create_embed("🗳️ Skip Vote", f"{ctx.author.mention} has voted to skip! ({current_votes}/{required_votes} votes needed)", discord.Color.gold()))
 
     @commands.command(name="pause", help="Pauses the current track.")
     async def pause(self, ctx):
