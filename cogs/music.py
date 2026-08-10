@@ -483,9 +483,15 @@ class Music(commands.Cog):
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(title=f"📋 Music Queue (Page {i+1}/{len(chunks)})", color=discord.Color.blue())
             description = ""
+            
+            if i == 0 and player.current:
+                description += f"**🎵 Currently Playing:**\n[{player.current.title}]({player.current.uri})\n\n**⏭️ Upcoming Tracks:**\n"
+                
             for j, track in enumerate(chunk):
                 description += f"**{(i*10)+j+1}.** [{track.title}]({track.uri})\n"
             embed.description = description
+            
+            # Keep the footer for convenience on all pages
             if player.current:
                 embed.set_footer(text=f"Currently Playing: {player.current.title}")
             embeds.append(embed)
