@@ -965,5 +965,60 @@ class Music(commands.Cog):
             
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    filter = app_commands.Group(name="filter", description="Audio filter commands")
+
+    @filter.command(name="bassboost", description="Applies a bassboost filter.")
+    @app_commands.describe(level="Bassboost level from 0 to 100")
+    async def filter_bassboost(self, interaction: discord.Interaction, level: int = 50):
+        player = interaction.guild.voice_client
+        if not player or not player.playing:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        level = max(0, min(100, level))
+        gain = level / 100.0 * 1.0 # Max gain of 1.0
+        
+        filters: wavelink.Filters = player.filters
+        filters.equalizer.set(bands=[
+            wavelink.Equalizer(band=0, gain=gain),
+            wavelink.Equalizer(band=1, gain=gain * 0.75),
+            wavelink.Equalizer(band=2, gain=gain * 0.5),
+            wavelink.Equalizer(band=3, gain=gain * 0.25),
+        ])
+        await player.set_filters(filters)
+        await interaction.response.send_message(embed=self.create_embed("🎛️ Bassboost", f"Bassboost set to {level}%", discord.Color.green()))
+
+    @filter.command(name="nightcore", description="Applies a nightcore filter (pitch and speed up).")
+    async def filter_nightcore(self, interaction: discord.Interaction):
+        player = interaction.guild.voice_client
+        if not player or not player.playing:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        filters: wavelink.Filters = player.filters
+        filters.timescale.set(pitch=1.2, speed=1.1, rate=1.0)
+        await player.set_filters(filters)
+        await interaction.response.send_message(embed=self.create_embed("🎛️ Nightcore", "Applied Nightcore filter!", discord.Color.purple()))
+
+    @filter.command(name="vaporwave", description="Applies a vaporwave filter (slowed and reverb).")
+    async def filter_vaporwave(self, interaction: discord.Interaction):
+        player = interaction.guild.voice_client
+        if not player or not player.playing:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        filters: wavelink.Filters = player.filters
+        filters.timescale.set(pitch=0.8, speed=0.8, rate=1.0)
+        await player.set_filters(filters)
+        await interaction.response.send_message(embed=self.create_embed("🎛️ Vaporwave", "Applied Vaporwave filter! Ａｅｓｔｈｅｔｉｃ", discord.Color.teal()))
+
+    @filter.command(name="reset", description="Resets all audio filters.")
+    async def filter_reset(self, interaction: discord.Interaction):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("The bot is not in a voice channel.", ephemeral=True)
+            
+        filters: wavelink.Filters = player.filters
+        filters.reset()
+        await player.set_filters(filters)
+        await interaction.response.send_message(embed=self.create_embed("🎛️ Reset", "All filters have been reset to normal.", discord.Color.green()))
+
 async def setup(bot):
     await bot.add_cog(Music(bot))
