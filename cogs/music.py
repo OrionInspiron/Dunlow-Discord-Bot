@@ -142,6 +142,21 @@ class Music(commands.Cog):
         print(f"Wavelink Node connected: {payload.node!r} | Resumed: {payload.resumed}")
 
     @commands.Cog.listener()
+    async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
+        print(f"Wavelink Node disconnected: {payload.node.identifier}")
+        # Notify active voice clients that a node died and we are failing over
+        for vc in self.bot.voice_clients:
+            if isinstance(vc, wavelink.Player) and hasattr(vc, "text_channel"):
+                try:
+                    await vc.text_channel.send(embed=self.create_embed(
+                        "⚠️ Server Connection Lost",
+                        f"The music server we were connected to just crashed! Wavelink is automatically switching to a backup server. Your music should resume shortly.",
+                        discord.Color.orange()
+                    ))
+                except Exception:
+                    pass
+
+    @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         player = payload.player
         if not player or not hasattr(player, "text_channel"):
