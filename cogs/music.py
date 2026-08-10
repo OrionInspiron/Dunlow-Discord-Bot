@@ -65,6 +65,7 @@ class Music(commands.Cog):
         self.stay_connected = {} # guild_id -> bool
         self.intentional_leaves = set() # guild_ids that were explicitly told to leave
         self.skip_votes = {} # guild_id -> set(user_ids)
+        self.last_skip = {} # guild_id -> timestamp
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
@@ -373,6 +374,11 @@ class Music(commands.Cog):
         if not player or not player.playing:
             return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
             
+        import time
+        last_skip = self.last_skip.get(ctx.guild.id, 0)
+        if time.time() - last_skip < 4.0:
+            return await ctx.send(embed=self.create_embed("⏳ Loading", "The server is currently buffering the next song. Please wait a few seconds!", discord.Color.gold()), delete_after=5)
+            
         if not ctx.author.voice or ctx.author.voice.channel != player.channel:
             return await ctx.send(embed=self.create_embed("❌ Error", "You must be in the same voice channel to skip.", discord.Color.red()))
 
@@ -384,6 +390,7 @@ class Music(commands.Cog):
         # - The requester is the only real person in the channel
         # - The requester has manage_channels permissions (Admin/DJ)
         if len(members) <= 1 or ctx.author.guild_permissions.manage_channels:
+            self.last_skip[ctx.guild.id] = time.time()
             await player.skip(force=True)
             return await ctx.send(embed=self.create_embed("⏭️ Skipped", "Skipped the current track."))
 
@@ -399,6 +406,7 @@ class Music(commands.Cog):
 
         if current_votes >= required_votes:
             self.skip_votes[ctx.guild.id].clear()
+            self.last_skip[ctx.guild.id] = time.time()
             await player.skip(force=True)
             await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipped the current track!", discord.Color.green()))
         else:
