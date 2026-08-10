@@ -61,6 +61,8 @@ class QueuePaginationView(discord.ui.View):
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.stay_connected = {} # guild_id -> bool
+        self.intentional_leaves = set() # guild_ids that were explicitly told to leave
 
     async def cog_load(self):
         self.bot.loop.create_task(self.start_nodes())
@@ -138,6 +140,34 @@ class Music(commands.Cog):
         return discord.Embed(title=title, description=description, color=color)
 
     @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # Ignore other users
+        if member.id != self.bot.user.id:
+            return
+            
+        # If the bot was completely disconnected from a channel
+        if before.channel is not None and after.channel is None:
+            # Check if it was an intentional disconnect (like using the stop command or empty queue without 24/7)
+            if member.guild.id in self.intentional_leaves:
+                self.intentional_leaves.discard(member.guild.id)
+                return
+                
+            # Otherwise, Discord or the Node dropped the connection. 
+            # If 24/7 mode is enabled, forcefully rejoin!
+            is_247 = self.stay_connected.get(member.guild.id, True)
+            if is_247:
+                try:
+                    # Give discord a tiny moment to clean up the old ghost connection
+                    await asyncio.sleep(2)
+                    player = await before.channel.connect(cls=wavelink.Player)
+                    player.autoplay = wavelink.AutoPlayMode.partial
+                    player.inactive_timeout = 0
+                    player.inactive_channel_tokens = 0
+                    print(f"Auto-rejoined {before.channel.name} due to 24/7 mode.")
+                except Exception as e:
+                    print(f"Failed to auto-rejoin: {e}")
+
+    @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
         print(f"Wavelink Node connected: {payload.node!r} | Resumed: {payload.resumed}")
 
@@ -185,23 +215,20 @@ class Music(commands.Cog):
             
         if player.queue.is_empty:
             # Check 24/7 mode
-            is_247 = getattr(player, "stay_connected", True)
+            is_247 = self.stay_connected.get(player.guild.id, True)
             if not is_247:
+                self.intentional_leaves.add(player.guild.id)
                 await player.disconnect()
                 if hasattr(player, "text_channel"):
                     await player.text_channel.send(embed=self.create_embed("👋 Disconnected", "The queue is empty, so I have left the channel."))
 
     @commands.command(name="247", help="Toggles 24/7 mode (stay in channel when queue is empty).")
     async def toggle_247(self, ctx):
-        player = ctx.guild.voice_client
-        if not player:
-            return await ctx.send(embed=self.create_embed("❌ Error", "I am not connected to a voice channel.", discord.Color.red()))
-            
         # Default is True, toggle it
-        current = getattr(player, "stay_connected", True)
-        player.stay_connected = not current
+        current = self.stay_connected.get(ctx.guild.id, True)
+        self.stay_connected[ctx.guild.id] = not current
         
-        status = "Enabled ✅" if player.stay_connected else "Disabled ❌"
+        status = "Enabled ✅" if self.stay_connected[ctx.guild.id] else "Disabled ❌"
         await ctx.send(embed=self.create_embed("🕒 24/7 Mode", f"24/7 mode is now **{status}**.", discord.Color.gold()))
 
     @commands.command(name="join", help="Joins your current voice channel.")
@@ -465,9 +492,11 @@ class Music(commands.Cog):
         if not player:
             return await ctx.send(embed=self.create_embed("❌ Error", "I am not connected to a voice channel.", discord.Color.red()))
             
+        # Mark as an intentional leave so 24/7 mode doesn't auto-rejoin immediately
+        self.intentional_leaves.add(ctx.guild.id)
         player.queue.clear()
         await player.disconnect()
-        await ctx.send(embed=self.create_embed("🛑 Stopped", "Stopped the music and left the channel."))
+        await ctx.send(embed=self.create_embed("🛑 Stopped", "Stopped the music and left the channel.", discord.Color.red()))
 
     @commands.command(name="queue", help="Shows the current music queue.", aliases=['q'])
     async def queue(self, ctx):
