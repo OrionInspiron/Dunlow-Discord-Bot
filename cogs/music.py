@@ -238,6 +238,24 @@ class Music(commands.Cog):
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
 
+    async def setup_sponsorblock(self, player: wavelink.Player):
+        node = player.node
+        url = f"{node.uri}/v4/sessions/{node.session_id}/players/{player.guild.id}/sponsorblock/categories"
+        categories = ["sponsor", "interaction", "selfpromo"]
+        headers = {"Authorization": node.password}
+        try:
+            async with node.client.session.put(url, json=categories, headers=headers) as resp:
+                pass
+        except Exception as e:
+            print(f"SponsorBlock error: {e}")
+
+    @commands.Cog.listener()
+    async def on_wavelink_extra_event(self, payload: wavelink.ExtraEventPayload):
+        if payload.event == "SponsorBlockSegmentSkipped":
+            player = payload.player
+            if player and hasattr(player, "text_channel") and player.text_channel:
+                await player.text_channel.send(embed=self.create_embed("⏭️ Sponsor Skipped", "Automatically skipped a sponsor/promo segment!", discord.Color.green()))
+
     def create_embed(self, title, description="", color=discord.Color.blurple()):
         return discord.Embed(title=title, description=description, color=color)
 
@@ -282,9 +300,10 @@ class Music(commands.Cog):
                     # Give discord a tiny moment to clean up the old ghost connection
                     await asyncio.sleep(2)
                     player = await before.channel.connect(cls=wavelink.Player)
-                    player.autoplay = wavelink.AutoPlayMode.partial
+                    player.autoplay = wavelink.AutoPlayMode.enabled
                     player.inactive_timeout = 0
                     player.inactive_channel_tokens = 0
+                    await self.setup_sponsorblock(player)
                     print(f"Auto-rejoined {before.channel.name} due to 24/7 mode.")
                 except Exception as e:
                     print(f"Failed to auto-rejoin: {e}")
@@ -435,9 +454,10 @@ class Music(commands.Cog):
         try:
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.partial
+                player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
+                await self.setup_sponsorblock(player)
                 await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
@@ -461,9 +481,10 @@ class Music(commands.Cog):
             
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.partial
+                player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
+                await self.setup_sponsorblock(player)
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
 

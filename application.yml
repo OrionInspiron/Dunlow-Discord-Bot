@@ -32,6 +32,8 @@ lavalink:
       repository: "https://maven.lavalink.dev/releases"
     - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.3.0"
       repository: "https://maven.lavalink.dev/releases"
+    - dependency: "com.github.topi314.sponsorblock:sponsorblock-plugin:3.0.1"
+      repository: "https://maven.lavalink.dev/releases"
   server:
     password: "youshallnotpass"
     sources:
