@@ -250,6 +250,32 @@ class Music(commands.Cog):
                     await player.text_channel.send(embed=self.create_embed("👋 Disconnected", "Queue is empty. Use `f#247` to make me stay forever!"))
 
     @commands.Cog.listener()
+    async def on_wavelink_track_exception(self, payload: wavelink.TrackExceptionEventPayload):
+        player = payload.player
+        if not player:
+            return
+            
+        track = payload.track
+        # Re-queue the track at the end
+        player.queue.put(track)
+        
+        if hasattr(player, "text_channel") and player.text_channel:
+            await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** due to a server error. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
+        player = payload.player
+        if not player:
+            return
+            
+        track = payload.track
+        # Re-queue the track at the end
+        player.queue.put(track)
+        
+        if hasattr(player, "text_channel") and player.text_channel:
+            await player.text_channel.send(embed=self.create_embed("⚠️ Track Stuck", f"**{track.title}** got stuck loading. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
+
+    @commands.Cog.listener()
     async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
         print(f"Node {payload.node.identifier} disconnected. Attempting Failover Memory restoration...")
         
