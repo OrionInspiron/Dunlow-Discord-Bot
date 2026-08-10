@@ -267,17 +267,23 @@ class Music(commands.Cog):
         vc = ctx.author.voice.channel
         player = ctx.guild.voice_client
 
-        if not player:
-            player = await vc.connect(cls=wavelink.Player)
-            player.autoplay = wavelink.AutoPlayMode.partial
-            player.inactive_timeout = 0
-            player.inactive_channel_tokens = 0
-            await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
-        elif player.channel.id != vc.id:
-            await player.move_to(vc)
-            await ctx.send(embed=self.create_embed("✅ Moved Channel", f"Moved to {vc.mention}"))
-        else:
-            await ctx.send(embed=self.create_embed("ℹ️ Info", "I am already in your voice channel.", discord.Color.gold()))
+        try:
+            if not player:
+                player = await vc.connect(cls=wavelink.Player)
+                player.autoplay = wavelink.AutoPlayMode.partial
+                player.inactive_timeout = 0
+                player.inactive_channel_tokens = 0
+                await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
+            elif player.channel.id != vc.id:
+                await player.move_to(vc)
+                await ctx.send(embed=self.create_embed("✅ Moved Channel", f"Moved to {vc.mention}"))
+            else:
+                await ctx.send(embed=self.create_embed("ℹ️ Info", "I am already in your voice channel.", discord.Color.gold()))
+        except Exception as e:
+            if "ChannelTimeoutException" in type(e).__name__ or "timeout" in str(e).lower():
+                await ctx.send(embed=self.create_embed("⚠️ Discord Voice Lag", "Discord's voice servers took too long to respond. Try again or change your Voice Channel's region!", discord.Color.orange()))
+            else:
+                await ctx.send(embed=self.create_embed("❌ Error", f"Failed to join: {e}", discord.Color.red()))
 
     @commands.command(name="play", help="Plays a track from YouTube or a URL.", aliases=['p'])
     async def play(self, ctx, *, search: str):
@@ -369,6 +375,8 @@ class Music(commands.Cog):
                 await ctx.send(embed=self.create_embed("⚠️ Server Overloaded", "The public music servers are currently experiencing heavy traffic and rejected the request. Please try playing the song again in a few seconds!", discord.Color.gold()))
             elif error_msg == "None" or "LavalinkLoadException" in type(e).__name__:
                 await ctx.send(embed=self.create_embed("⚠️ YouTube Blocked", "The public music server was temporarily blocked by YouTube for requesting too many songs at once (Rate Limited). Try using a Spotify playlist instead, or wait a few minutes!", discord.Color.orange()))
+            elif "ChannelTimeoutException" in type(e).__name__ or "timeout" in error_msg.lower():
+                await ctx.send(embed=self.create_embed("⚠️ Discord Voice Lag", "Discord's voice servers took too long to respond. Try again or change your Voice Channel's region!", discord.Color.orange()))
             else:
                 await ctx.send(embed=self.create_embed("❌ Error Debug", f"Error: {error_msg}\n```py\n{tb[:3000]}\n```", discord.Color.red()))
             print(f"Error in play command: {repr(e)}")
