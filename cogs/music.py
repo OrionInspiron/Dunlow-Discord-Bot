@@ -215,6 +215,8 @@ class Music(commands.Cog):
         if not player:
             player = await vc.connect(cls=wavelink.Player)
             player.autoplay = wavelink.AutoPlayMode.partial
+            player.inactive_timeout = 0
+            player.inactive_channel_tokens = 0
             await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
         elif player.channel.id != vc.id:
             await player.move_to(vc)
@@ -234,6 +236,8 @@ class Music(commands.Cog):
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
                 player.autoplay = wavelink.AutoPlayMode.partial
+                player.inactive_timeout = 0
+                player.inactive_channel_tokens = 0
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
 
