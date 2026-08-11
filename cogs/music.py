@@ -265,28 +265,6 @@ class Music(commands.Cog):
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
-        track = payload.track
-        player = payload.player
-        if not player or not track:
-            return
-            
-        guild_id = player.guild.id
-        
-        # Retrieve requester if available
-        requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
-        if not requester_id and hasattr(track, "requester"):
-             requester_id = track.requester
-
-        doc = {
-            "guild_id": guild_id,
-            "track_title": track.title,
-            "artist": track.author,
-            "requester_id": requester_id,
-            "played_at": datetime.datetime.now(datetime.timezone.utc)
-        }
-        await self.history_col.insert_one(doc)
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
@@ -441,6 +419,22 @@ class Music(commands.Cog):
             self.skip_votes[player.guild.id].clear()
             
         track = payload.track
+        
+        # Log to MongoDB
+        requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
+        if not requester_id and hasattr(track, "requester"):
+             requester_id = track.requester
+             
+        try:
+            await self.history_col.insert_one({
+                "guild_id": player.guild.id,
+                "track_title": track.title,
+                "artist": track.author,
+                "requester_id": requester_id,
+                "played_at": datetime.datetime.now(datetime.timezone.utc)
+            })
+        except Exception as e:
+            print(f"Failed to log track to MongoDB: {e}")
         
         # Create a premium-looking embed
         embed = self.create_player_embed(player, track)
@@ -765,19 +759,28 @@ class Music(commands.Cog):
         player.queue.clear()
         await ctx.send(embed=self.create_embed("🗑️ Queue Cleared", "All upcoming tracks have been removed."))
 
-    @commands.command(name="remove", help="Removes a track from the queue at the given position.", aliases=['rm'])
-    async def remove(self, ctx, index: int):
+    @commands.command(name="remove", help="Removes a track from the queue by position or name.", aliases=['rm'])
+    async def remove(self, ctx, *, query: str):
         player = ctx.guild.voice_client
         if not player or player.queue.is_empty:
             return await ctx.send(embed=self.create_embed("❌ Error", "The queue is empty.", discord.Color.red()))
             
-        if index < 1 or index > len(player.queue):
-            return await ctx.send(embed=self.create_embed("❌ Error", f"Please provide a valid track number between 1 and {len(player.queue)}.", discord.Color.red()))
+        if query.isdigit():
+            index = int(query)
+            if index < 1 or index > len(player.queue):
+                return await ctx.send(embed=self.create_embed("❌ Error", f"Please provide a valid track number between 1 and {len(player.queue)}.", discord.Color.red()))
+            removed_track = player.queue[index - 1]
+            player.queue.delete(index - 1)
+            await ctx.send(embed=self.create_embed("🗑️ Track Removed", f"Removed **{removed_track.title}** from the queue."))
+        else:
+            query_lower = query.lower()
+            for i, track in enumerate(player.queue):
+                if query_lower in track.title.lower():
+                    removed_track = track
+                    player.queue.delete(i)
+                    return await ctx.send(embed=self.create_embed("🗑️ Track Removed", f"Removed **{removed_track.title}** from the queue."))
             
-        # Wavelink queue is zero-indexed, but users type 1-indexed
-        removed_track = player.queue[index - 1]
-        player.queue.delete(index - 1)
-        await ctx.send(embed=self.create_embed("🗑️ Track Removed", f"Removed **{removed_track.title}** from the queue."))
+            await ctx.send(embed=self.create_embed("❌ Error", f"Could not find any song matching **'{query}'** in the queue.", discord.Color.red()))
 
     @commands.command(name="seek", help="Seeks to a specific position in the track (in seconds).")
     async def seek(self, ctx, seconds: int):
