@@ -1136,5 +1136,86 @@ class Music(commands.Cog):
             
         await ctx.send(embed=embed)
 
+    @commands.command(name="playlyrics", help="Search for a song by its lyrics and play it.")
+    async def playlyrics(self, ctx, *, query: str):
+        player = ctx.guild.voice_client
+        if not player:
+            if not ctx.author.voice:
+                return await ctx.send(embed=self.create_embed("❌ Error", "You are not connected to a voice channel.", discord.Color.red()))
+            player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+        
+        headers = {"User-Agent": "FemboysBot/1.0 (Discord Music Bot)"}
+        params = {"q": query}
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://lrclib.net/api/search", params=params, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if not data:
+                        return await ctx.send(embed=self.create_embed("❌ Error", "No songs matched those lyrics.", discord.Color.red()))
+                    
+                    track_name = data[0].get("trackName", "")
+                    artist_name = data[0].get("artistName", "")
+                    search_query = f"{track_name} {artist_name}".strip()
+                    
+                    tracks = await wavelink.Playable.search(search_query)
+                    if not tracks:
+                        return await ctx.send(embed=self.create_embed("❌ Error", f"Found lyrics for **{search_query}** but couldn't find the audio track.", discord.Color.red()))
+                        
+                    track = tracks[0]
+                    track.extras = {"requester_id": ctx.author.id}
+                    await player.queue.put_wait(track)
+                    
+                    await ctx.send(embed=self.create_embed("🎶 Lyrics Match", f"Found lyrics for **{search_query}**!\nAdded [{track.title}]({track.uri}) to the queue.", discord.Color.green()))
+                    
+                    if not player.playing:
+                        await player.play(player.queue.get())
+                else:
+                    return await ctx.send(embed=self.create_embed("❌ Error", "Lyrics API is currently unavailable.", discord.Color.red()))
+
+    @commands.command(name="seek", help="Seek to a specific time in the song (e.g. 1m30s, 90, 1:30)")
+    async def seek(self, ctx, time_str: str):
+        player = ctx.guild.voice_client
+        if not player or not player.playing:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        total_seconds = 0
+        import re
+        if ":" in time_str:
+            parts = time_str.split(":")
+            if len(parts) == 2:
+                total_seconds = int(parts[0]) * 60 + int(parts[1])
+            elif len(parts) == 3:
+                total_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif re.match(r'^(\d+[hms])+$', time_str):
+            hours = re.search(r'(\d+)h', time_str)
+            mins = re.search(r'(\d+)m', time_str)
+            secs = re.search(r'(\d+)s', time_str)
+            if hours: total_seconds += int(hours.group(1)) * 3600
+            if mins: total_seconds += int(mins.group(1)) * 60
+            if secs: total_seconds += int(secs.group(1))
+        elif time_str.isdigit():
+            total_seconds = int(time_str)
+        else:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Invalid time format! Use `1m30s`, `1:30`, or `90`.", discord.Color.red()))
+            
+        milliseconds = total_seconds * 1000
+        await player.seek(milliseconds)
+        await ctx.send(embed=self.create_embed("⏩ Seek", f"Jumped to **{datetime.timedelta(seconds=total_seconds)}** in the track.", discord.Color.green()))
+
+    @commands.command(name="speed", help="Change the playback speed (0.5x to 2.0x)")
+    async def speed(self, ctx, multiplier: float):
+        player = ctx.guild.voice_client
+        if not player:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        if multiplier < 0.5 or multiplier > 2.0:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Speed multiplier must be between 0.5 and 2.0.", discord.Color.red()))
+            
+        filters: wavelink.Filters = player.filters
+        filters.timescale.set(speed=multiplier, pitch=1.0, rate=1.0)
+        await player.set_filters(filters)
+        
+        await ctx.send(embed=self.create_embed("⏩ Speed", f"Playback speed set to **{multiplier}x**.", discord.Color.green()))
+
 async def setup(bot):
     await bot.add_cog(Music(bot))
