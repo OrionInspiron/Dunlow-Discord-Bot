@@ -68,6 +68,29 @@ class PlayerUI(discord.ui.View):
         super().__init__(timeout=None)
         self.music_cog = music_cog
 
+    @discord.ui.button(label="⏮️ Previous", style=discord.ButtonStyle.secondary, custom_id="music_previous")
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = interaction.guild.voice_client
+        if not player:
+            return await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
+            
+        if not interaction.user.voice or interaction.user.voice.channel != player.channel:
+            return await interaction.response.send_message("You must be in the same voice channel.", ephemeral=True)
+
+        if not player.queue.history:
+            return await interaction.response.send_message("There is no previous song in the history.", ephemeral=True)
+
+        # Re-queue the currently playing song to the front so it's not lost
+        if player.current:
+            player.queue.put_at(0, player.current)
+            
+        # Get and remove the most recently played track from history
+        previous_track = player.queue.history[-1]
+        del player.queue.history[-1]
+        
+        await player.play(previous_track)
+        await interaction.response.send_message("⏮️ Playing previous track.", ephemeral=False)
+
     @discord.ui.button(label="⏯️ Play/Pause", style=discord.ButtonStyle.primary, custom_id="music_play_pause")
     async def play_pause(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = interaction.guild.voice_client
