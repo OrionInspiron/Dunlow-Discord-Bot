@@ -364,18 +364,35 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
-        print(f"Wavelink Node disconnected: {payload.node.identifier}")
-        # Notify active voice clients that a node died and we are failing over
+        print(f"Wavelink Node disconnected: {payload.node.identifier}. Attempting player migration...")
+        
         for vc in self.bot.voice_clients:
-            if isinstance(vc, wavelink.Player) and hasattr(vc, "text_channel"):
+            if isinstance(vc, wavelink.Player) and vc.node == payload.node:
                 try:
-                    await vc.text_channel.send(embed=self.create_embed(
-                        "⚠️ Server Connection Lost",
-                        f"The music server we were connected to just crashed! Wavelink is automatically switching to a backup server. Your music should resume shortly.",
-                        discord.Color.orange()
-                    ))
-                except Exception:
-                    pass
+                    # Get a new healthy node from the pool
+                    new_node = wavelink.Pool.get_node()
+                    if new_node and new_node != payload.node:
+                        print(f"Migrating player for guild {vc.guild.id} to new node: {new_node.identifier}")
+                        
+                        # Store current playback state
+                        current_track = vc.current
+                        current_position = vc.position
+                        
+                        # Actually switch the player to the new healthy node
+                        await vc.switch_node(new_node)
+                        
+                        # Resume exactly where it left off
+                        if current_track:
+                            await vc.play(current_track, start=current_position)
+                            
+                        if hasattr(vc, "text_channel") and vc.text_channel:
+                            await vc.text_channel.send(embed=self.create_embed(
+                                "🔄 Server Failover",
+                                f"The music server crashed! Automatically migrated to a backup server and restored **{current_track.title if current_track else 'the queue'}**.",
+                                discord.Color.gold()
+                            ))
+                except Exception as e:
+                    print(f"Failed to migrate player for guild {vc.guild.id}: {e}")
 
     def create_player_embed(self, player, track):
         duration_str = "Live Stream"
@@ -515,25 +532,7 @@ class Music(commands.Cog):
             if hasattr(player, "text_channel") and player.text_channel:
                 await player.text_channel.send(embed=self.create_embed("⚠️ Track Stuck", f"**{track.title}** got stuck loading. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
 
-    @commands.Cog.listener()
-    async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
-        print(f"Node {payload.node.identifier} disconnected. Attempting Failover Memory restoration...")
-        
-        for vc in self.bot.voice_clients:
-            if isinstance(vc, wavelink.Player):
-                # If the player was interrupted and stopped playing, but still has a current track
-                if vc.current and not vc.playing:
-                    try:
-                        print(f"Restoring {vc.current.title} at {vc.position}ms for guild {vc.guild.id}")
-                        await asyncio.sleep(3) # Give wavelink a moment to move to the fallback node
-                        
-                        # Resume exactly where it left off!
-                        await vc.play(vc.current, start=vc.position)
-                        
-                        if hasattr(vc, "text_channel") and vc.text_channel:
-                            await vc.text_channel.send(embed=self.create_embed("🔄 Node Failover", f"The music server crashed! Automatically restored playback of **{vc.current.title}**.", discord.Color.gold()))
-                    except Exception as e:
-                        print(f"Failover restoration failed: {e}")
+
 
     @commands.command(name="247", help="Toggles 24/7 mode (stay in channel when queue is empty).")
     async def toggle_247(self, ctx):
