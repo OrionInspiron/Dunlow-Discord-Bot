@@ -612,22 +612,6 @@ class Music(commands.Cog):
                 await ctx.send(embed=self.create_embed("❌ Error Debug", f"Error: {error_msg}\n```py\n{tb[:3000]}\n```", discord.Color.red()))
             print(f"Error in play command: {repr(e)}")
 
-    @commands.command(name="nowplaying", help="Shows the currently playing track.", aliases=['np'])
-    async def nowplaying(self, ctx):
-        player = ctx.guild.voice_client
-        if not player or not player.playing:
-            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
-            
-        track = player.current
-        embed = discord.Embed(title="🎶 Now Playing", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
-        if track.author:
-            embed.add_field(name="Author", value=track.author, inline=True)
-        if track.length:
-            minutes, seconds = divmod(track.length // 1000, 60)
-            embed.add_field(name="Duration", value=f"{minutes}:{seconds:02d}", inline=True)
-            
-        await ctx.send(embed=embed)
-
     @commands.command(name="skip", help="Skips the current track.", aliases=['s'])
     async def skip(self, ctx):
         player = ctx.guild.voice_client
