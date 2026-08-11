@@ -1217,5 +1217,66 @@ class Music(commands.Cog):
         
         await ctx.send(embed=self.create_embed("⏩ Speed", f"Playback speed set to **{multiplier}x**.", discord.Color.green()))
 
+    @commands.command(name="np", help="Shows the currently playing song with a live progress bar.")
+    async def now_playing(self, ctx):
+        player = ctx.guild.voice_client
+        if not player or not getattr(player, "playing", False):
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        track = player.current
+        if not track:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        def create_np_embed(player, track):
+            position_ms = player.position
+            length_ms = track.length
+            
+            pos_seconds = int(position_ms // 1000)
+            len_seconds = int(length_ms // 1000)
+            
+            pos_str = f"{pos_seconds // 60:02d}:{pos_seconds % 60:02d}"
+            len_str = f"{len_seconds // 60:02d}:{len_seconds % 60:02d}"
+            
+            bar_length = 20
+            percent = position_ms / length_ms if length_ms > 0 else 0
+            percent = max(0.0, min(1.0, percent))
+            
+            filled_length = int(bar_length * percent)
+            empty_length = bar_length - filled_length - 1
+            if empty_length < 0:
+                empty_length = 0
+                
+            bar = "=" * filled_length + "🔘" + "-" * empty_length
+            if filled_length == bar_length:
+                bar = "=" * bar_length
+                
+            embed = discord.Embed(title="🎶 Now Playing", color=discord.Color.blue())
+            embed.add_field(name=f"{track.title} by {track.author}", value=f"`{pos_str}` [{bar}] `{len_str}`", inline=False)
+            return embed
+            
+        embed = create_np_embed(player, track)
+        message = await ctx.send(embed=embed)
+        
+        async def update_np_task():
+            try:
+                while True:
+                    await asyncio.sleep(5)
+                    if not ctx.guild.voice_client or not getattr(ctx.guild.voice_client, "playing", False):
+                        break
+                    if ctx.guild.voice_client.current != track:
+                        break
+                        
+                    updated_embed = create_np_embed(ctx.guild.voice_client, track)
+                    try:
+                        await message.edit(embed=updated_embed)
+                    except discord.NotFound:
+                        break
+                    except discord.HTTPException:
+                        pass
+            except Exception as e:
+                print(f"Error in NP loop: {e}")
+                
+        self.bot.loop.create_task(update_np_task())
+
 async def setup(bot):
     await bot.add_cog(Music(bot))
