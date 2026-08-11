@@ -460,6 +460,7 @@ class Music(commands.Cog):
         self.bot.loop.create_task(log_to_db())
 
         async def update_player_ui():
+            nonlocal msg
             try:
                 while True:
                     await asyncio.sleep(5)
@@ -470,7 +471,16 @@ class Music(commands.Cog):
                         
                     updated_embed = self.create_player_embed(player, track)
                     try:
-                        await msg.edit(embed=updated_embed)
+                        if player.text_channel.last_message_id != msg.id:
+                            try:
+                                await msg.delete()
+                            except:
+                                pass
+                            view = PlayerUI(self)
+                            msg = await player.text_channel.send(embed=updated_embed, view=view)
+                            self.ui_messages[player.guild.id] = msg
+                        else:
+                            await msg.edit(embed=updated_embed)
                     except discord.NotFound:
                         break
                     except discord.HTTPException:
