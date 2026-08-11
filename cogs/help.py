@@ -62,6 +62,7 @@ class HelpCog(commands.Cog):
             "nightcore": "Speeds up the song and raises the pitch for a Nightcore vibe.",
             "vaporwave": "Slows down the song and lowers the pitch for a chill Vaporwave aesthetic.",
             "karaoke": "Applies a karaoke filter and retrieves the lyrics.",
+            "8d": "Spins the audio around your head for an immersive 8D effect. Put on headphones!",
             "reset": "Turns off all audio filters and returns the song to normal.",
             "help": "Shows this helpful guide to all the bot's commands!",
             "history": "Shows the last 10 tracks played in this server.",

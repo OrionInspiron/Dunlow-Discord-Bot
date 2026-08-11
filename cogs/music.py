@@ -1027,9 +1027,20 @@ class Music(commands.Cog):
             
         await ctx.send(embed=embed)
 
+    @filter.command(name="8d", help="Applies an 8D audio filter.")
+    async def filter_8d(self, ctx):
+        player = ctx.guild.voice_client
+        if not player or not player.playing:
+            return await ctx.send(embed=self.create_embed("❌ Error", "Nothing is playing right now.", discord.Color.red()))
+            
+        filters: wavelink.Filters = player.filters
+        filters.rotation.set(rotation_hz=0.2)
+        await player.set_filters(filters)
+        await ctx.send(embed=self.create_embed("🎛️ 8D Audio", "Applied 8D audio filter! Put on your headphones! 🎧", discord.Color.purple()))
+
     @commands.group(name="filter", invoke_without_command=True)
     async def filter(self, ctx):
-        await ctx.send(embed=self.create_embed("🎛️ Filter Commands", "Use `f#filter bassboost <level>`, `f#filter nightcore`, `f#filter vaporwave`, `f#filter karaoke`, or `f#filter reset`.", discord.Color.gold()))
+        await ctx.send(embed=self.create_embed("🎛️ Filter Commands", "Use `f#filter bassboost <level>`, `f#filter nightcore`, `f#filter vaporwave`, `f#filter karaoke`, `f#filter 8d`, or `f#filter reset`.", discord.Color.gold()))
 
     @filter.command(name="bassboost", help="Applies a bassboost filter (level 0 to 100).")
     async def filter_bassboost(self, ctx, level: int = 50):
