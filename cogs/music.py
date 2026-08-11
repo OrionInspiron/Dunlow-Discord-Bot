@@ -423,22 +423,7 @@ class Music(commands.Cog):
             
         track = payload.track
         
-        # Log to MongoDB
-        requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
-        if not requester_id and hasattr(track, "requester"):
-             requester_id = track.requester
-             
-        try:
-            await self.history_col.insert_one({
-                "guild_id": player.guild.id,
-                "track_title": track.title,
-                "artist": track.author,
-                "requester_id": requester_id,
-                "played_at": datetime.datetime.now(datetime.timezone.utc)
-            })
-        except Exception as e:
-            print(f"Failed to log track to MongoDB: {e}")
-        
+
         # Create a premium-looking embed
         embed = self.create_player_embed(player, track)
         
@@ -454,6 +439,25 @@ class Music(commands.Cog):
         view = PlayerUI(self)
         msg = await player.text_channel.send(embed=embed, view=view)
         self.ui_messages[player.guild.id] = msg
+
+        # Log to MongoDB in the background so it doesn't delay the UI!
+        async def log_to_db():
+            requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
+            if not requester_id and hasattr(track, "requester"):
+                 requester_id = track.requester
+                 
+            try:
+                await self.history_col.insert_one({
+                    "guild_id": player.guild.id,
+                    "track_title": track.title,
+                    "artist": track.author,
+                    "requester_id": requester_id,
+                    "played_at": datetime.datetime.now(datetime.timezone.utc)
+                })
+            except Exception as e:
+                print(f"Failed to log track to MongoDB: {e}")
+                
+        self.bot.loop.create_task(log_to_db())
 
         async def update_player_ui():
             try:
