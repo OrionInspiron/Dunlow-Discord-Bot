@@ -17,6 +17,7 @@ import asyncio
 import aiohttp
 import urllib.parse
 import math
+import datetime
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
@@ -174,6 +175,7 @@ class Music(commands.Cog):
         self.bot.loop.create_task(self.start_nodes())
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(os.getenv("MONGO_URI"))
         self.db = self.mongo_client["music_bot"]["playlists"]
+        self.history_col = self.mongo_client["music_bot"]["play_history"]
 
     async def cog_unload(self):
         if hasattr(self, 'mongo_client'):
@@ -234,6 +236,29 @@ class Music(commands.Cog):
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
+        track = payload.track
+        player = payload.player
+        if not player or not track:
+            return
+            
+        guild_id = player.guild.id
+        
+        # Retrieve requester if available
+        requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
+        if not requester_id and hasattr(track, "requester"):
+             requester_id = track.requester
+
+        doc = {
+            "guild_id": guild_id,
+            "track_title": track.title,
+            "artist": track.author,
+            "requester_id": requester_id,
+            "played_at": datetime.datetime.now(datetime.timezone.utc)
+        }
+        await self.history_col.insert_one(doc)
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
@@ -1041,6 +1066,52 @@ class Music(commands.Cog):
         filters.reset()
         await player.set_filters(filters)
         await ctx.send(embed=self.create_embed("🎛️ Reset", "All filters have been reset to normal.", discord.Color.green()))
+
+    @commands.command(name="history", help="Shows the last 10 tracks played in this server.")
+    async def history(self, ctx):
+        cursor = self.history_col.find({"guild_id": ctx.guild.id}).sort("played_at", -1).limit(10)
+        tracks = await cursor.to_list(length=10)
+        
+        if not tracks:
+            return await ctx.send(embed=self.create_embed("📊 Play History", "No tracks have been played yet!", discord.Color.blue()))
+            
+        embed = discord.Embed(title="📊 Last 10 Tracks Played", color=discord.Color.blue())
+        for i, track in enumerate(tracks, 1):
+            played_at = track.get("played_at")
+            timestamp = f"<t:{int(played_at.timestamp())}:R>" if played_at else "Unknown time"
+            
+            track_title = track.get('track_title', 'Unknown')
+            artist = track.get('artist', 'Unknown')
+            embed.add_field(name=f"{i}. {track_title} by {artist}", value=f"Played {timestamp}", inline=False)
+            
+        await ctx.send(embed=embed)
+
+    @commands.command(name="top", help="Shows the top 10 most played tracks in this server.")
+    async def top(self, ctx):
+        pipeline = [
+            {"$match": {"guild_id": ctx.guild.id}},
+            {"$group": {
+                "_id": {"title": "$track_title", "artist": "$artist"},
+                "plays": {"$sum": 1}
+            }},
+            {"$sort": {"plays": -1}},
+            {"$limit": 10}
+        ]
+        
+        cursor = self.history_col.aggregate(pipeline)
+        top_tracks = await cursor.to_list(length=10)
+        
+        if not top_tracks:
+            return await ctx.send(embed=self.create_embed("🏆 Top Tracks", "No tracks have been played yet!", discord.Color.gold()))
+            
+        embed = discord.Embed(title="🏆 Top 10 Most Played Tracks", color=discord.Color.gold())
+        for i, track in enumerate(top_tracks, 1):
+            title = track["_id"].get("title", "Unknown")
+            artist = track["_id"].get("artist", "Unknown")
+            plays = track["plays"]
+            embed.add_field(name=f"{i}. {title} by {artist}", value=f"Plays: {plays}", inline=False)
+            
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
