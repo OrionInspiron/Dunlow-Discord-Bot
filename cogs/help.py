@@ -63,7 +63,12 @@ class HelpCog(commands.Cog):
             "vaporwave": "Slows down the song and lowers the pitch for a chill Vaporwave aesthetic.",
             "karaoke": "Applies a karaoke filter and retrieves the lyrics.",
             "reset": "Turns off all audio filters and returns the song to normal.",
-            "help": "Shows this helpful guide to all the bot's commands!"
+            "help": "Shows this helpful guide to all the bot's commands!",
+            "np": "Shows the currently playing song with a live progress bar.",
+            "history": "Shows the last 10 tracks played in this server.",
+            "top": "Shows the top 10 most played tracks in this server.",
+            "playlyrics": "Searches for a song by its lyrics and plays it.",
+            "speed": "Changes the playback speed (0.5x to 2.0x)."
         }
 
         commands_list = []
