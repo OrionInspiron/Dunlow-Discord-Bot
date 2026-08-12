@@ -268,45 +268,45 @@ class Music(commands.Cog):
             retries=3
         )
 
-        # Fallback Node 2 (AjieDev)
+        # Fallback Node 2 (Serenetia)
         node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "https://lava-v4.ajieblogs.eu.org:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "https://dsc.gg/ajidevserver"),
+            uri=os.getenv("LAVALINK_URI_2", "https://lavalinkv4.serenetia.com:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "https://seretia.link/discord"),
             retries=3
         )
 
-        # Fallback Node 3 (TechByte)
+        # Fallback Node 3 (Jirayu)
         node3 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_3", "http://lavahatry4.techbyte.host:3000"), 
-            password=os.getenv("LAVALINK_PASSWORD_3", "NAIGLAVA-dash.techbyte.host"),
+            uri=os.getenv("LAVALINK_URI_3", "https://lavalink.jirayu.net:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_3", "youshallnotpass"),
             retries=3
         )
 
-        # Fallback Node 4 (Oreshi)
+        # Fallback Node 4 (Millohost)
         node4 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_4", "http://proxy.oreshi.com:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_4", "https://discord.gg/RPCfvBSUuM"),
+            uri=os.getenv("LAVALINK_URI_4", "https://lava-v4.millohost.my.id:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_4", "https://discord.gg/mjS5J2K3ep"),
             retries=3
         )
 
-        # Fallback Node 5 (Muzykant)
+        # Fallback Node 5 (Trinium 1)
         node5 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_5", "https://lavalink_v4.muzykant.xyz:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_5", "https://discord.gg/v6sdrD9kPh"),
+            uri=os.getenv("LAVALINK_URI_5", "https://lavalink-v4.triniumhost.com:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_5", "free"),
             retries=3
         )
 
-        # Fallback Node 6 (Disutils 1)
+        # Fallback Node 6 (Trinium 2)
         node6 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_6", "https://lavalink-1.is-it.pink:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_6", "https://disutils.com"),
+            uri=os.getenv("LAVALINK_URI_6", "https://nodelink.triniumhost.com:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_6", "free"),
             retries=3
         )
 
-        # Fallback Node 7 (Disutils 2)
+        # Fallback Node 7 (Trinium 3)
         node7 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_7", "https://lavalink-2.is-it.pink:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_7", "https://disutils.com"),
+            uri=os.getenv("LAVALINK_URI_7", "https://nodelink-02.triniumhost.com:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_7", "trinium"),
             retries=3
         )
 
@@ -316,7 +316,6 @@ class Music(commands.Cog):
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
-
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
