@@ -136,20 +136,7 @@ class PlayerUI(discord.ui.View):
             await interaction.response.send_message("⏭️ Force-skipped the track.", ephemeral=False)
             
             if next_track:
-                try:
-                    embed = self.music_cog.create_player_embed(player, next_track)
-                    view = PlayerUI(self.music_cog)
-                    msg = await interaction.channel.send(embed=embed, view=view)
-                    
-                    old_msg = self.music_cog.ui_messages.get(player.guild.id)
-                    if old_msg:
-                        try:
-                            await old_msg.delete()
-                        except Exception:
-                            pass
-                    self.music_cog.ui_messages[player.guild.id] = msg
-                except Exception as e:
-                    print(f"Failed manual UI on admin skip: {e}")
+                pass
             return
 
         if interaction.guild.id not in self.music_cog.skip_votes:
@@ -169,30 +156,10 @@ class PlayerUI(discord.ui.View):
             
             # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
             # We MUST manually pop the queue and play the next track!
-            next_track = None
             if not player.queue.is_empty:
-                next_track = player.queue.get()
-                await player.play(next_track)
+                await player.play(player.queue.get())
                 
             await interaction.response.send_message(f"⏭️ Vote passed ({current_votes}/{required_votes}). Skipped the track!", ephemeral=False)
-            
-            # Manually update UI for the next track
-            if next_track:
-                try:
-                    embed = self.music_cog.create_player_embed(player, next_track)
-                    view = PlayerUI(self.music_cog)
-                    msg = await interaction.channel.send(embed=embed, view=view)
-                    
-                    old_msg = self.music_cog.ui_messages.get(player.guild.id)
-                    if old_msg:
-                        try:
-                            await old_msg.delete()
-                        except Exception:
-                            pass
-                            
-                    self.music_cog.ui_messages[player.guild.id] = msg
-                except Exception as e:
-                    print(f"Failed manual UI on skip: {e}")
         else:
             await interaction.response.send_message(f"🗳️ {interaction.user.mention} voted to skip! ({current_votes}/{required_votes} votes needed)", ephemeral=False)
 
@@ -836,28 +803,10 @@ class Music(commands.Cog):
             
             # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
             # We MUST manually pop the queue and play the next track!
-            next_track = None
             if not player.queue.is_empty:
-                next_track = player.queue.get()
-                await player.play(next_track)
+                await player.play(player.queue.get())
                     
             await ctx.send(embed=self.create_embed("⏭️ Skipped", "Forced skip by Admin/DJ."))
-            
-            if next_track:
-                try:
-                    embed = self.create_player_embed(player, next_track)
-                    view = PlayerUI(self)
-                    msg = await ctx.send(embed=embed, view=view)
-                    
-                    old_msg = self.ui_messages.get(player.guild.id)
-                    if old_msg:
-                        try:
-                            await old_msg.delete()
-                        except Exception:
-                            pass
-                    self.ui_messages[player.guild.id] = msg
-                except Exception as e:
-                    print(f"Failed manual UI on skip command: {e}")
             return
 
         # Initialize vote set for the guild if not exists
@@ -878,28 +827,10 @@ class Music(commands.Cog):
             
             # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
             # We MUST manually pop the queue and play the next track!
-            next_track = None
             if not player.queue.is_empty:
-                next_track = player.queue.get()
-                await player.play(next_track)
+                await player.play(player.queue.get())
                     
             await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipping the track!"))
-            
-            if next_track:
-                try:
-                    embed = self.create_player_embed(player, next_track)
-                    view = PlayerUI(self)
-                    msg = await ctx.send(embed=embed, view=view)
-                    
-                    old_msg = self.ui_messages.get(player.guild.id)
-                    if old_msg:
-                        try:
-                            await old_msg.delete()
-                        except Exception:
-                            pass
-                    self.ui_messages[player.guild.id] = msg
-                except Exception as e:
-                    print(f"Failed manual UI on skip vote: {e}")
         else:
             await ctx.send(embed=self.create_embed("🗳️ Skip Vote", f"{ctx.author.mention} has voted to skip! ({current_votes}/{required_votes} votes needed)", discord.Color.gold()))
 
