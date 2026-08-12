@@ -414,9 +414,20 @@ class Music(commands.Cog):
             player.text_channel = text_channel # Restore it
 
         if not text_channel:
-            print(f"Warning: No text_channel found for PlayerUI in guild {player.guild.id}")
+            # Absolute fallback: Find the first channel the bot can send messages in
+            for channel in player.guild.text_channels:
+                if channel.permissions_for(player.guild.me).send_messages:
+                    text_channel = channel
+                    player.text_channel = channel
+                    print(f"Used hard fallback channel: {channel.name}")
+                    break
+
+        if not text_channel:
+            print(f"CRITICAL ERROR: Absolutely no text_channel found for PlayerUI in guild {player.guild.id}")
             return
             
+        print(f"DEBUG: on_wavelink_track_start fired for track {payload.track.title}")
+        
         # Reset skip votes for the new track
         if player.guild.id in self.skip_votes:
             self.skip_votes[player.guild.id].clear()
@@ -595,7 +606,7 @@ class Music(commands.Cog):
             
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.disabled
+                player.autoplay = wavelink.AutoPlayMode.partial
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
