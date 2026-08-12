@@ -428,21 +428,24 @@ class Music(commands.Cog):
         track = payload.track
         
 
-        # Create a premium-looking embed
-        embed = self.create_player_embed(player, track)
-        
-        # Delete old UI message
-        old_msg = self.ui_messages.get(player.guild.id)
-        if old_msg:
-            try:
-                await old_msg.delete()
-            except Exception:
-                pass
-                
-        # Send new UI
-        view = PlayerUI(self)
-        msg = await player.text_channel.send(embed=embed, view=view)
-        self.ui_messages[player.guild.id] = msg
+        try:
+            # Create a premium-looking embed
+            embed = self.create_player_embed(player, track)
+            
+            # Delete old UI message
+            old_msg = self.ui_messages.get(player.guild.id)
+            if old_msg:
+                try:
+                    await old_msg.delete()
+                except Exception:
+                    pass
+                    
+            # Send new UI
+            view = PlayerUI(self)
+            msg = await text_channel.send(embed=embed, view=view)
+            self.ui_messages[player.guild.id] = msg
+        except Exception as e:
+            print(f"CRITICAL ERROR Sending Player UI: {e}")
 
         # Log to MongoDB in the background so it doesn't delay the UI!
         async def log_to_db():
@@ -569,7 +572,7 @@ class Music(commands.Cog):
         try:
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.enabled
+                player.autoplay = wavelink.AutoPlayMode.disabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
@@ -596,7 +599,7 @@ class Music(commands.Cog):
             
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.enabled
+                player.autoplay = wavelink.AutoPlayMode.disabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
