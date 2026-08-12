@@ -125,18 +125,7 @@ class PlayerUI(discord.ui.View):
             self.music_cog.last_skip[interaction.guild.id] = time.time()
             
             await player.skip(force=True)
-            
-            # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
-            # We MUST manually pop the queue and play the next track!
-            next_track = None
-            if not player.queue.is_empty:
-                next_track = player.queue.get()
-                await player.play(next_track)
-                
             await interaction.response.send_message("⏭️ Force-skipped the track.", ephemeral=False)
-            
-            if next_track:
-                pass
             return
 
         if interaction.guild.id not in self.music_cog.skip_votes:
@@ -153,11 +142,6 @@ class PlayerUI(discord.ui.View):
             self.music_cog.last_skip[interaction.guild.id] = time.time()
             
             await player.skip(force=True)
-            
-            # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
-            # We MUST manually pop the queue and play the next track!
-            if not player.queue.is_empty:
-                await player.play(player.queue.get())
                 
             await interaction.response.send_message(f"⏭️ Vote passed ({current_votes}/{required_votes}). Skipped the track!", ephemeral=False)
         else:
@@ -800,11 +784,6 @@ class Music(commands.Cog):
             self.last_skip[ctx.guild.id] = time.time()
             
             await player.skip(force=True)
-            
-            # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
-            # We MUST manually pop the queue and play the next track!
-            if not player.queue.is_empty:
-                await player.play(player.queue.get())
                     
             await ctx.send(embed=self.create_embed("⏭️ Skipped", "Forced skip by Admin/DJ."))
             return
@@ -824,11 +803,6 @@ class Music(commands.Cog):
             self.last_skip[ctx.guild.id] = time.time()
             
             await player.skip(force=True)
-            
-            # Since broken public nodes don't send TrackEndEvent, AutoPlay never fires.
-            # We MUST manually pop the queue and play the next track!
-            if not player.queue.is_empty:
-                await player.play(player.queue.get())
                     
             await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipping the track!"))
         else:
