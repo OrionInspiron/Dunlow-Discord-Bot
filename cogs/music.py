@@ -138,8 +138,30 @@ class PlayerUI(discord.ui.View):
         if current_votes >= required_votes:
             self.music_cog.skip_votes[interaction.guild.id].clear()
             self.music_cog.last_skip[interaction.guild.id] = time.time()
+            
+            # Manually get the next track before skipping
+            next_track = player.queue[0] if not player.queue.is_empty else None
+            
             await player.skip(force=True)
             await interaction.response.send_message(f"⏭️ Vote passed ({current_votes}/{required_votes}). Skipped the track!", ephemeral=False)
+            
+            # Manually update UI for the next track
+            if next_track:
+                try:
+                    embed = self.music_cog.create_player_embed(player, next_track)
+                    view = PlayerUI(self.music_cog)
+                    msg = await interaction.channel.send(embed=embed, view=view)
+                    
+                    old_msg = self.music_cog.ui_messages.get(player.guild.id)
+                    if old_msg:
+                        try:
+                            await old_msg.delete()
+                        except Exception:
+                            pass
+                            
+                    self.music_cog.ui_messages[player.guild.id] = msg
+                except Exception as e:
+                    print(f"Failed manual UI on skip: {e}")
         else:
             await interaction.response.send_message(f"🗳️ {interaction.user.mention} voted to skip! ({current_votes}/{required_votes} votes needed)", ephemeral=False)
 
@@ -677,6 +699,20 @@ class Music(commands.Cog):
                         if not player.playing:
                             await player.set_volume(30)
                             await player.play(track)
+                            # Bypass broken public node websocket events by manually creating the UI
+                            try:
+                                embed = self.create_player_embed(player, track)
+                                old_msg = self.ui_messages.get(player.guild.id)
+                                if old_msg:
+                                    try:
+                                        await old_msg.delete()
+                                    except Exception:
+                                        pass
+                                view = PlayerUI(self)
+                                msg = await ctx.send(embed=embed, view=view)
+                                self.ui_messages[player.guild.id] = msg
+                            except Exception as e:
+                                print(f"Failed manual UI: {e}")
                         else:
                             player.queue.put(track)
                             embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
@@ -740,15 +776,34 @@ class Music(commands.Cog):
         # - The requester has manage_channels permissions (Admin/DJ)
         if len(members) <= 1 or ctx.author.guild_permissions.manage_channels:
             self.last_skip[ctx.guild.id] = time.time()
+            next_track = player.queue[0] if not player.queue.is_empty else None
+            
             await player.skip(force=True)
-            return await ctx.send(embed=self.create_embed("⏭️ Skipped", "Skipped the current track."))
+            await ctx.send(embed=self.create_embed("⏭️ Skipped", "Forced skip by Admin/DJ."))
+            
+            if next_track:
+                try:
+                    embed = self.create_player_embed(player, next_track)
+                    view = PlayerUI(self)
+                    msg = await ctx.send(embed=embed, view=view)
+                    
+                    old_msg = self.ui_messages.get(player.guild.id)
+                    if old_msg:
+                        try:
+                            await old_msg.delete()
+                        except Exception:
+                            pass
+                    self.ui_messages[player.guild.id] = msg
+                except Exception as e:
+                    print(f"Failed manual UI on skip command: {e}")
+            return
 
         # Initialize vote set for the guild if not exists
         if ctx.guild.id not in self.skip_votes:
             self.skip_votes[ctx.guild.id] = set()
 
         if ctx.author.id in self.skip_votes[ctx.guild.id]:
-            return await ctx.send(embed=self.create_embed("ℹ️ Vote Recorded", f"You have already voted to skip! ({len(self.skip_votes[ctx.guild.id])}/{required_votes} votes needed)", discord.Color.gold()))
+            return await ctx.send(embed=self.create_embed("❌ Error", f"You have already voted! ({len(self.skip_votes[ctx.guild.id])}/{required_votes} votes needed)", discord.Color.red()))
 
         self.skip_votes[ctx.guild.id].add(ctx.author.id)
         current_votes = len(self.skip_votes[ctx.guild.id])
@@ -756,8 +811,26 @@ class Music(commands.Cog):
         if current_votes >= required_votes:
             self.skip_votes[ctx.guild.id].clear()
             self.last_skip[ctx.guild.id] = time.time()
+            next_track = player.queue[0] if not player.queue.is_empty else None
+            
             await player.skip(force=True)
-            await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipped the current track!", discord.Color.green()))
+            await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipping the track!"))
+            
+            if next_track:
+                try:
+                    embed = self.create_player_embed(player, next_track)
+                    view = PlayerUI(self)
+                    msg = await ctx.send(embed=embed, view=view)
+                    
+                    old_msg = self.ui_messages.get(player.guild.id)
+                    if old_msg:
+                        try:
+                            await old_msg.delete()
+                        except Exception:
+                            pass
+                    self.ui_messages[player.guild.id] = msg
+                except Exception as e:
+                    print(f"Failed manual UI on skip vote: {e}")
         else:
             await ctx.send(embed=self.create_embed("🗳️ Skip Vote", f"{ctx.author.mention} has voted to skip! ({current_votes}/{required_votes} votes needed)", discord.Color.gold()))
 
