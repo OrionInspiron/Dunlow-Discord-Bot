@@ -554,9 +554,6 @@ class Music(commands.Cog):
             max_attempts = 3
             for attempt in range(max_attempts):
                 try:
-                    if not search.startswith("http"):
-                        search = f"scsearch:{search}"
-                    
                     tracks = await wavelink.Playable.search(search)
                     if not tracks:
                         return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
