@@ -601,19 +601,22 @@ class Music(commands.Cog):
 
             player.text_channel = ctx.channel
 
-            tracks = await wavelink.Playable.search(search)
-            if not tracks:
-                return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    tracks = await wavelink.Playable.search(search)
+                    if not tracks:
+                        return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
 
-            if isinstance(tracks, wavelink.Playlist):
-                added = list(tracks)
-                
-                # Filter out duplicates within the playlist and those already in queue
-                existing_uris = set()
-                if player.current:
-                    existing_uris.add(player.current.uri)
-                for q_track in player.queue:
-                    existing_uris.add(q_track.uri)
+                    if isinstance(tracks, wavelink.Playlist):
+                        added = list(tracks)
+                        
+                        # Filter out duplicates within the playlist and those already in queue
+                        existing_uris = set()
+                        if player.current:
+                            existing_uris.add(player.current.uri)
+                        for q_track in player.queue:
+                            existing_uris.add(q_track.uri)
                     
                 unique_tracks = []
                 for t in added:
@@ -621,48 +624,69 @@ class Music(commands.Cog):
                         unique_tracks.append(t)
                         existing_uris.add(t.uri)
                 
-                if not unique_tracks:
-                    return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", "All songs from this playlist are already in your queue!", discord.Color.gold()))
+                        if not unique_tracks:
+                            return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", "All songs from this playlist are already in your queue!", discord.Color.gold()))
 
-                # If idle, play the first track explicitly and queue the rest
-                if not player.playing:
-                    await player.set_volume(30)
-                    await player.play(unique_tracks[0])
-                    for t in unique_tracks[1:]:
-                        player.queue.put(t)
-                else:
-                    for t in unique_tracks:
-                        player.queue.put(t)
-                
-                skipped = len(added) - len(unique_tracks)
-                skipped_msg = f" (Skipped {skipped} duplicates)" if skipped > 0 else ""
-                
-                # Wavelink 3 Playlist doesn't have a name attribute, so we just say "A playlist"
-                playlist_name = getattr(tracks, "name", "A playlist")
-                await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{playlist_name}** ({len(unique_tracks)} new tracks) to the queue.{skipped_msg}", discord.Color.green()))
-            else:
-                track = tracks[0]
-                
-                # Check if the track is currently playing or in the queue
-                is_duplicate = False
-                if player.current and player.current.uri == track.uri:
-                    is_duplicate = True
-                else:
-                    for q_track in player.queue:
-                        if q_track.uri == track.uri:
+                        # If idle, play the first track explicitly and queue the rest
+                        if not player.playing:
+                            await player.set_volume(30)
+                            await player.play(unique_tracks[0])
+                            for t in unique_tracks[1:]:
+                                player.queue.put(t)
+                        else:
+                            for t in unique_tracks:
+                                player.queue.put(t)
+                        
+                        skipped = len(added) - len(unique_tracks)
+                        skipped_msg = f" (Skipped {skipped} duplicates)" if skipped > 0 else ""
+                        
+                        # Wavelink 3 Playlist doesn't have a name attribute, so we just say "A playlist"
+                        playlist_name = getattr(tracks, "name", "A playlist")
+                        await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{playlist_name}** ({len(unique_tracks)} new tracks) to the queue.{skipped_msg}", discord.Color.green()))
+                    else:
+                        track = tracks[0]
+                        
+                        # Check if the track is currently playing or in the queue
+                        is_duplicate = False
+                        if player.current and player.current.uri == track.uri:
                             is_duplicate = True
-                            break
-                            
-                if is_duplicate:
-                    return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", f"The song **{track.title}** is already in your queue! You can use `f#skipto {track.title}` to play that song.", discord.Color.gold()))
+                        else:
+                            for q_track in player.queue:
+                                if q_track.uri == track.uri:
+                                    is_duplicate = True
+                                    break
+                                    
+                        if is_duplicate:
+                            return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", f"The song **{track.title}** is already in your queue! You can use `f#skipto {track.title}` to play that song.", discord.Color.gold()))
 
-                if not player.playing:
-                    await player.set_volume(30)
-                    await player.play(track)
-                else:
-                    player.queue.put(track)
-                    embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
-                    await ctx.send(embed=embed)
+                        if not player.playing:
+                            await player.set_volume(30)
+                            await player.play(track)
+                        else:
+                            player.queue.put(track)
+                            embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
+                            await ctx.send(embed=embed)
+                            
+                    break # success, exit retry loop
+                    
+                except Exception as inner_e:
+                    error_msg = str(inner_e)
+                    is_rate_limit = "429" in error_msg or "mimetype: text/plain" in error_msg or "502" in error_msg or "500" in error_msg
+                    
+                    if is_rate_limit and attempt < max_attempts - 1:
+                        bad_node = getattr(player, "node", None)
+                        if bad_node:
+                            print(f"Rate limit/Error hit on {bad_node.uri}. Closing node to force failover...")
+                            try:
+                                await bad_node.close()
+                            except:
+                                pass
+                        
+                        await ctx.send(embed=self.create_embed("🔄 Automatic Failover", "The primary server was overloaded. Instantly switching to a backup server and retrying...", discord.Color.gold()))
+                        await asyncio.sleep(2)
+                        continue
+                    else:
+                        raise inner_e # Exhausted retries or non-recoverable, pass to outer except block
                 
         except Exception as e:
             import traceback
