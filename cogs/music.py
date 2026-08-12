@@ -123,8 +123,35 @@ class PlayerUI(discord.ui.View):
         
         if len(members) <= 1 or interaction.user.guild_permissions.manage_channels or is_dj:
             self.music_cog.last_skip[interaction.guild.id] = time.time()
-            await player.skip(force=True)
-            return await interaction.response.send_message("⏭️ Force-skipped the track.", ephemeral=False)
+            next_track = player.queue[0] if not player.queue.is_empty else None
+            
+            try:
+                await player.skip(force=True)
+            except Exception as e:
+                print(f"Player skip threw error, trying manual pop: {e}")
+                if next_track:
+                    await player.play(next_track)
+                else:
+                    await player.stop()
+                    
+            await interaction.response.send_message("⏭️ Force-skipped the track.", ephemeral=False)
+            
+            if next_track:
+                try:
+                    embed = self.music_cog.create_player_embed(player, next_track)
+                    view = PlayerUI(self.music_cog)
+                    msg = await interaction.channel.send(embed=embed, view=view)
+                    
+                    old_msg = self.music_cog.ui_messages.get(player.guild.id)
+                    if old_msg:
+                        try:
+                            await old_msg.delete()
+                        except Exception:
+                            pass
+                    self.music_cog.ui_messages[player.guild.id] = msg
+                except Exception as e:
+                    print(f"Failed manual UI on admin skip: {e}")
+            return
 
         if interaction.guild.id not in self.music_cog.skip_votes:
             self.music_cog.skip_votes[interaction.guild.id] = set()
@@ -778,7 +805,15 @@ class Music(commands.Cog):
             self.last_skip[ctx.guild.id] = time.time()
             next_track = player.queue[0] if not player.queue.is_empty else None
             
-            await player.skip(force=True)
+            try:
+                await player.skip(force=True)
+            except Exception as e:
+                print(f"Player skip threw error on command, trying manual pop: {e}")
+                if next_track:
+                    await player.play(next_track)
+                else:
+                    await player.stop()
+                    
             await ctx.send(embed=self.create_embed("⏭️ Skipped", "Forced skip by Admin/DJ."))
             
             if next_track:
@@ -813,7 +848,15 @@ class Music(commands.Cog):
             self.last_skip[ctx.guild.id] = time.time()
             next_track = player.queue[0] if not player.queue.is_empty else None
             
-            await player.skip(force=True)
+            try:
+                await player.skip(force=True)
+            except Exception as e:
+                print(f"Player skip threw error on command, trying manual pop: {e}")
+                if next_track:
+                    await player.play(next_track)
+                else:
+                    await player.stop()
+                    
             await ctx.send(embed=self.create_embed("⏭️ Skipped", f"Vote passed ({current_votes}/{required_votes}). Skipping the track!"))
             
             if next_track:
