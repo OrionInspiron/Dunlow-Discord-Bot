@@ -212,58 +212,51 @@ class Music(commands.Cog):
 
 
 
-        # Fallback Node 2 (Public - highly available)
+        # Fallback Node 2 (AjieDev)
+        node2 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_2", "https://lava-v4.ajieblogs.eu.org:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "https://dsc.gg/ajidevserver"),
+            retries=3
+        )
+
+        # Fallback Node 3 (TechByte)
+        node3 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_3", "http://lavahatry4.techbyte.host:3000"), 
+            password=os.getenv("LAVALINK_PASSWORD_3", "NAIGLAVA-dash.techbyte.host"),
+            retries=3
+        )
+
+        # Fallback Node 4 (Oreshi)
+        node4 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_4", "http://proxy.oreshi.com:2333"), 
+            password=os.getenv("LAVALINK_PASSWORD_4", "https://discord.gg/RPCfvBSUuM"),
+            retries=3
+        )
+
+        # Fallback Node 5 (Muzykant)
         node5 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_5", "https://lavalink.ahri.dev:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_5", "ahridev"),
+            uri=os.getenv("LAVALINK_URI_5", "https://lavalink_v4.muzykant.xyz:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_5", "https://discord.gg/v6sdrD9kPh"),
             retries=3
         )
 
-        # Fallback Node 3
+        # Fallback Node 6 (Disutils 1)
         node6 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_6", "https://v4.lavalink.info:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_6", "youshallnotpass"),
+            uri=os.getenv("LAVALINK_URI_6", "https://lavalink-1.is-it.pink:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_6", "https://disutils.com"),
             retries=3
         )
 
-        # Fallback Node 4
+        # Fallback Node 7 (Disutils 2)
         node7 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_7", "https://lavalink.lexnet.cc:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_7", "youshallnotpass"),
-            retries=3
-        )
-
-        # Fallback Node 5
-        node8 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_8", "https://lava.freelavalink.gq:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_8", "freelavalink.gq"),
-            retries=3
-        )
-
-        # Fallback Node 6 (High Reliability)
-        node9 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_9", "https://lavalink.oops.wtf:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_9", "www.freelavalink.com"),
-            retries=3
-        )
-
-        # Fallback Node 7 (High Reliability)
-        node10 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_10", "https://node1.cartel.gay:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_10", "cartel.gay"),
-            retries=3
-        )
-
-        # Fallback Node 8 (High Reliability)
-        node11 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_11", "https://lava-v4.ajieblogs.com:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_11", "https://dsc.gg/ajidevserver"),
+            uri=os.getenv("LAVALINK_URI_7", "https://lavalink-2.is-it.pink:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_7", "https://disutils.com"),
             retries=3
         )
 
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node5, node6, node7, node8, node9, node10, node11]
+            nodes_list = [node1, node2, node3, node4, node5, node6, node7]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
