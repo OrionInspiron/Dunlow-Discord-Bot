@@ -617,12 +617,12 @@ class Music(commands.Cog):
                             existing_uris.add(player.current.uri)
                         for q_track in player.queue:
                             existing_uris.add(q_track.uri)
-                    
-                unique_tracks = []
-                for t in added:
-                    if t.uri not in existing_uris:
-                        unique_tracks.append(t)
-                        existing_uris.add(t.uri)
+                            
+                        unique_tracks = []
+                        for t in added:
+                            if t.uri not in existing_uris:
+                                unique_tracks.append(t)
+                                existing_uris.add(t.uri)
                 
                         if not unique_tracks:
                             return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", "All songs from this playlist are already in your queue!", discord.Color.gold()))
