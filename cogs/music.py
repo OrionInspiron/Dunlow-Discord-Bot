@@ -428,12 +428,16 @@ class Music(commands.Cog):
                         if current_track:
                             await vc.play(current_track, start=current_position)
                             
-                        if hasattr(vc, "text_channel") and vc.text_channel:
-                            await vc.text_channel.send(embed=self.create_embed(
+                        # Send a message to the text channel if available
+                        text_channel = getattr(vc, "text_channel", None)
+                        if text_channel:
+                            await text_channel.send(embed=self.create_embed(
                                 "🔄 Server Failover",
-                                f"The music server crashed! Automatically migrated to a backup server and restored **{current_track.title if current_track else 'the queue'}**.",
-                                discord.Color.gold()
+                                f"Disconnected from the old server. Now connected to `{new_node.identifier}` to keep the music playing!",
+                                discord.Color.orange()
                             ))
+                        else:
+                            print(f"Could not announce node switch in guild {vc.guild.id} because text_channel was not set.")
                 except Exception as e:
                     print(f"Failed to migrate player for guild {vc.guild.id}: {e}")
 
@@ -654,12 +658,12 @@ class Music(commands.Cog):
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
-                await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}"))
+                await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}\n📡 **Connected to server:** `{player.node.identifier}`"))
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
-                await ctx.send(embed=self.create_embed("✅ Moved Channel", f"Moved to {vc.mention}"))
+                await ctx.send(embed=self.create_embed("✅ Moved Channel", f"Moved to {vc.mention}\n📡 **Current server:** `{player.node.identifier}`"))
             else:
-                await ctx.send(embed=self.create_embed("ℹ️ Info", "I am already in your voice channel.", discord.Color.gold()))
+                await ctx.send(embed=self.create_embed("ℹ️ Info", f"I am already in your voice channel.\n📡 **Current server:** `{player.node.identifier}`", discord.Color.gold()))
         except Exception as e:
             if "ChannelTimeoutException" in type(e).__name__ or "timeout" in str(e).lower():
                 await ctx.send(embed=self.create_embed("⚠️ Discord Voice Lag", "Discord's voice servers took too long to respond. Try again or change your Voice Channel's region!", discord.Color.orange()))
@@ -681,8 +685,10 @@ class Music(commands.Cog):
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
+                await ctx.send(embed=self.create_embed("✅ Joined Channel", f"Successfully joined {vc.mention}\n📡 **Connected to server:** `{player.node.identifier}`"))
             elif player.channel.id != vc.id:
                 await player.move_to(vc)
+                await ctx.send(embed=self.create_embed("✅ Moved Channel", f"Moved to {vc.mention}\n📡 **Current server:** `{player.node.identifier}`"))
 
             player.text_channel = ctx.channel
             self.text_channels[ctx.guild.id] = ctx.channel
