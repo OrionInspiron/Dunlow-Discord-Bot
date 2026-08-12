@@ -22,6 +22,12 @@ lavalink:
 plugins:
   youtube:
     enabled: true
+    clients:
+      - MUSIC
+      - TVHTML5EMBEDDED
+      - WEBEMBEDDED
+      - ANDROID_VR
+      - TV
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
