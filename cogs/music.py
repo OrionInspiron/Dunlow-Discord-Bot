@@ -206,8 +206,8 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
         # Primary Node
-        node_uri = os.getenv("LAVALINK_URI", "https://lavalinkv4.serenetia.com:443")
-        node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
+        node_uri = os.getenv("LAVALINK_URI", "https://lavalink.ahri.dev:443")
+        node_password = os.getenv("LAVALINK_PASSWORD", "ahridev")
         node1 = wavelink.Node(uri=node_uri, password=node_password, retries=3)
 
 
