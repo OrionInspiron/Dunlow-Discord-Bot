@@ -186,6 +186,8 @@ class PlayerUI(discord.ui.View):
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.ui_messages = {}
+        self.text_channels = {}
         self.stay_connected = {} # guild_id -> bool
         self.intentional_leaves = set() # guild_ids that were explicitly told to leave
         self.skip_votes = {} # guild_id -> set(user_ids)
@@ -407,7 +409,16 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         player = payload.player
-        if not player or not hasattr(player, "text_channel") or not player.text_channel:
+        
+        # In Wavelink 3/4, sometimes player custom attributes get wiped on node migrations.
+        # So we fetch the text_channel from our dictionary fallback if it's missing on the player itself.
+        text_channel = getattr(player, "text_channel", None)
+        if not text_channel and player.guild.id in getattr(self, "text_channels", {}):
+            text_channel = self.text_channels[player.guild.id]
+            player.text_channel = text_channel # Restore it
+
+        if not text_channel:
+            print(f"Warning: No text_channel found for PlayerUI in guild {player.guild.id}")
             return
             
         # Reset skip votes for the new track
@@ -593,6 +604,7 @@ class Music(commands.Cog):
                 await player.move_to(vc)
 
             player.text_channel = ctx.channel
+            self.text_channels[ctx.guild.id] = ctx.channel
 
             max_attempts = 3
             for attempt in range(max_attempts):
