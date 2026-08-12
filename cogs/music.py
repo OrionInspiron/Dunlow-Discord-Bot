@@ -261,17 +261,10 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
 
-        # Primary Node 1 (Private Server)
+        # Node 1 (Serenetia)
         node1 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI", "http://127.0.0.1:2333"),
-            password=os.getenv("LAVALINK_PASSWORD", "youshallnotpass"),
-            retries=3
-        )
-
-        # Fallback Node 2 (Serenetia)
-        node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "https://lavalinkv4.serenetia.com:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "https://seretia.link/discord"),
+            uri=os.getenv("LAVALINK_URI", "https://lavalinkv4.serenetia.com:443"), 
+            password=os.getenv("LAVALINK_PASSWORD", "https://seretia.link/discord"),
             retries=3
         )
 
@@ -333,7 +326,7 @@ class Music(commands.Cog):
 
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10]
+            nodes_list = [node1, node3, node4, node5, node6, node7, node8, node9, node10]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
