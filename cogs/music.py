@@ -705,20 +705,7 @@ class Music(commands.Cog):
                         if not player.playing:
                             await player.set_volume(30)
                             await player.play(track)
-                            # Bypass broken public node websocket events by manually creating the UI
-                            try:
-                                embed = self.create_player_embed(player, track)
-                                old_msg = self.ui_messages.get(player.guild.id)
-                                if old_msg:
-                                    try:
-                                        await old_msg.delete()
-                                    except Exception:
-                                        pass
-                                view = PlayerUI(self)
-                                msg = await ctx.send(embed=embed, view=view)
-                                self.ui_messages[player.guild.id] = msg
-                            except Exception as e:
-                                print(f"Failed manual UI: {e}")
+                            pass # UI is handled automatically by on_wavelink_track_start
                         else:
                             player.queue.put(track)
                             embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
