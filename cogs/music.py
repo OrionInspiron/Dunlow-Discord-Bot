@@ -256,7 +256,7 @@ class Music(commands.Cog):
 
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node2, node3, node4, node5, node6, node7]
+            nodes_list = [node2, node3, node4, node5, node6, node7]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
