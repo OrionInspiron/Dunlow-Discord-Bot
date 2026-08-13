@@ -1030,6 +1030,44 @@ class Music(commands.Cog):
         await player.skip(force=True)
         await ctx.send(embed=self.create_embed("⏭️ Skipped To", f"Skipped directly to **{target_track.title}** (Track #{index}).", discord.Color.green()))
 
+    @commands.command(name="switchnode", help="Manually switches the current Lavalink node to a new one (Admin only).")
+    @commands.has_permissions(administrator=True)
+    async def switchnode(self, ctx, identifier: str = None):
+        player = ctx.guild.voice_client
+        if not player:
+            return await ctx.send(embed=self.create_embed("❌ Error", "I am not connected to a voice channel.", discord.Color.red()))
+            
+        old_node = player.node
+        
+        try:
+            # Try to get nodes dynamically
+            all_nodes = []
+            if hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
+                all_nodes = list(wavelink.Pool.nodes.values())
+            
+            if identifier:
+                new_node = wavelink.Pool.get_node(identifier=identifier)
+                if not new_node:
+                    available = ", ".join([n.identifier for n in all_nodes]) if all_nodes else "Unknown"
+                    return await ctx.send(embed=self.create_embed("❌ Error", f"Node `{identifier}` not found.\nAvailable nodes: `{available}`", discord.Color.red()))
+            else:
+                if not all_nodes:
+                    # Fallback if Pool.nodes doesn't work as expected
+                    new_node = wavelink.Pool.get_node()
+                else:
+                    available_nodes = [n for n in all_nodes if n.identifier != old_node.identifier]
+                    if not available_nodes:
+                        return await ctx.send(embed=self.create_embed("❌ Error", "No other nodes are currently available.", discord.Color.red()))
+                    new_node = available_nodes[0]
+                
+            if new_node and new_node.identifier == old_node.identifier:
+                return await ctx.send(embed=self.create_embed("ℹ️ Info", f"Already connected to `{new_node.identifier}`.", discord.Color.gold()))
+                
+            await player.switch_node(new_node)
+            await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
+        except Exception as e:
+            await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {e}", discord.Color.red()))
+
     @commands.command(name="volume", help="Changes the player volume (1-100).", aliases=['vol'])
     async def volume(self, ctx, vol: int):
         player = ctx.guild.voice_client
