@@ -677,53 +677,21 @@ class Music(commands.Cog):
                     if isinstance(tracks, wavelink.Playlist):
                         added = list(tracks)
                         
-                        # Filter out duplicates within the playlist and those already in queue
-                        existing_uris = set()
-                        if player.current:
-                            existing_uris.add(player.current.uri)
-                        for q_track in player.queue:
-                            existing_uris.add(q_track.uri)
-                            
-                        unique_tracks = []
-                        for t in added:
-                            if t.uri not in existing_uris:
-                                unique_tracks.append(t)
-                                existing_uris.add(t.uri)
-                
-                        if not unique_tracks:
-                            return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", "All songs from this playlist are already in your queue!", discord.Color.gold()))
-
                         # If idle, play the first track explicitly and queue the rest
                         if not player.playing:
                             await player.set_volume(30)
-                            await player.play(unique_tracks[0])
-                            for t in unique_tracks[1:]:
+                            await player.play(added[0])
+                            for t in added[1:]:
                                 player.queue.put(t)
                         else:
-                            for t in unique_tracks:
+                            for t in added:
                                 player.queue.put(t)
-                        
-                        skipped = len(added) - len(unique_tracks)
-                        skipped_msg = f" (Skipped {skipped} duplicates)" if skipped > 0 else ""
                         
                         # Wavelink 3 Playlist doesn't have a name attribute, so we just say "A playlist"
                         playlist_name = getattr(tracks, "name", "A playlist")
-                        await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{playlist_name}** ({len(unique_tracks)} new tracks) to the queue.{skipped_msg}", discord.Color.green()))
+                        await ctx.send(embed=self.create_embed("✅ Playlist Added", f"Added **{playlist_name}** ({len(added)} tracks) to the queue.", discord.Color.green()))
                     else:
                         track = tracks[0]
-                        
-                        # Check if the track is currently playing or in the queue
-                        is_duplicate = False
-                        if player.current and player.current.uri == track.uri:
-                            is_duplicate = True
-                        else:
-                            for q_track in player.queue:
-                                if q_track.uri == track.uri:
-                                    is_duplicate = True
-                                    break
-                                    
-                        if is_duplicate:
-                            return await ctx.send(embed=self.create_embed("ℹ️ Already in Queue", f"The song **{track.title}** is already in your queue! You can use `f#skipto {track.title}` to play that song.", discord.Color.gold()))
 
                         if not player.playing:
                             await player.set_volume(30)
@@ -958,7 +926,7 @@ class Music(commands.Cog):
     @commands.command(name="queue", help="Shows the current music queue.", aliases=['q'])
     async def queue(self, ctx):
         player = ctx.guild.voice_client
-        if not player or player.queue.is_empty:
+        if not player or (player.queue.is_empty and not player.current):
             return await ctx.send(embed=self.create_embed("📋 Queue", "The queue is currently empty."))
             
         queue_list = list(player.queue)
