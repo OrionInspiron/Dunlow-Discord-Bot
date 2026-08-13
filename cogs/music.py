@@ -187,6 +187,8 @@ class PlayerUI(discord.ui.View):
         await player.disconnect()
         await interaction.response.send_message("⏹️ Stopped the music and cleared the queue.", ephemeral=False)
 
+REQUEST_CHANNEL_ID = 123456789012345678
+
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -209,6 +211,69 @@ class Music(commands.Cog):
     async def cog_unload(self):
         if hasattr(self, 'mongo_client'):
             self.mongo_client.close()
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+
+        if message.channel.id == REQUEST_CHANNEL_ID:
+            try:
+                await message.delete()
+            except Exception:
+                pass
+
+            if not message.author.voice:
+                tmp = await message.channel.send(embed=self.create_embed("❌ Error", "You must be in a voice channel to request music here.", discord.Color.red()))
+                await tmp.delete(delay=10)
+                return
+
+            vc = message.author.voice.channel
+            player = message.guild.voice_client
+
+            if not player:
+                try:
+                    player = await vc.connect(cls=wavelink.Player)
+                    player.autoplay = wavelink.AutoPlayMode.enabled
+                    player.inactive_timeout = 0
+                    player.inactive_channel_tokens = 0
+                    await self.setup_sponsorblock(player)
+                except Exception as e:
+                    tmp = await message.channel.send(embed=self.create_embed("❌ Error", f"Failed to join voice channel: {e}", discord.Color.red()))
+                    await tmp.delete(delay=10)
+                    return
+            elif player.channel.id != vc.id:
+                tmp = await message.channel.send(embed=self.create_embed("ℹ️ Info", f"I am already playing in {player.channel.mention}", discord.Color.gold()))
+                await tmp.delete(delay=10)
+                return
+            
+            player.text_channel = message.channel
+            self.text_channels[message.guild.id] = message.channel
+
+            try:
+                tracks = await wavelink.Playable.search(message.content)
+                if not tracks:
+                    tmp = await message.channel.send(embed=self.create_embed("❌ Not Found", f"Could not find any tracks for: `{message.content}`", discord.Color.red()))
+                    await tmp.delete(delay=10)
+                    return
+
+                track = tracks[0] if not isinstance(tracks, wavelink.Playlist) else tracks
+                
+                if isinstance(track, wavelink.Playlist):
+                    added = await player.queue.put_wait(track)
+                    tmp = await message.channel.send(embed=self.create_embed("✅ Playlist Added", f"Added **{track.name}** ({added} tracks) to the queue.", discord.Color.green()))
+                    if not player.playing:
+                        await player.play(player.queue.get())
+                else:
+                    await player.queue.put_wait(track)
+                    tmp = await message.channel.send(embed=self.create_embed("✅ Track Added", f"Added **{track.title}** to the queue.", discord.Color.green()))
+                    if not player.playing:
+                        await player.play(player.queue.get())
+                        
+                await tmp.delete(delay=10)
+            except Exception as e:
+                tmp = await message.channel.send(embed=self.create_embed("❌ Error", f"Failed to play track: {e}", discord.Color.red()))
+                await tmp.delete(delay=10)
 
     async def start_nodes(self):
 
@@ -563,7 +628,7 @@ class Music(commands.Cog):
         try:
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.disabled
+                player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
@@ -590,7 +655,7 @@ class Music(commands.Cog):
             
             if not player:
                 player = await vc.connect(cls=wavelink.Player)
-                player.autoplay = wavelink.AutoPlayMode.partial
+                player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
                 await self.setup_sponsorblock(player)
