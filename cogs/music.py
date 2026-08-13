@@ -298,9 +298,37 @@ class Music(commands.Cog):
             retries=3
         )
 
+        # Node 4 (KryptonByte)
+        node4 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_4", "https://lavalink.kryptonbyte.com:443"),
+            password=os.getenv("LAVALINK_PASSWORD_4", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 5 (Stackryze)
+        node5 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_5", "http://188.245.207.225:2333"),
+            password=os.getenv("LAVALINK_PASSWORD_5", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 6 (Lava-v4 AJP)
+        node6 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_6", "http://lava-v4.ajp.pw:2333"),
+            password=os.getenv("LAVALINK_PASSWORD_6", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 7 (Jirayu)
+        node7 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_7", "http://lavalink.jirayu.net:13592"),
+            password=os.getenv("LAVALINK_PASSWORD_7", "youshallnotpass"),
+            retries=3
+        )
+
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node2, node3]
+            nodes_list = [node1, node2, node3, node4, node5, node6, node7]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
