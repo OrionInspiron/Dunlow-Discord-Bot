@@ -247,8 +247,8 @@ class Music(commands.Cog):
                 await tmp.delete(delay=10)
                 return
             
-            player.text_channel = message.channel
-            self.text_channels[message.guild.id] = message.channel
+            player.text_channel = vc
+            self.text_channels[message.guild.id] = vc
 
             try:
                 tracks = await wavelink.Playable.search(message.content)
