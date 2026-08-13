@@ -485,21 +485,27 @@ class Music(commands.Cog):
         
 
         try:
-            # Create a premium-looking embed
-            embed = self.create_player_embed(player, track)
-            
-            # Delete old UI message
-            old_msg = self.ui_messages.get(player.guild.id)
-            if old_msg:
-                try:
-                    await old_msg.delete()
-                except Exception:
-                    pass
-                    
-            # Send new UI
-            view = PlayerUI(self)
-            msg = await text_channel.send(embed=embed, view=view)
-            self.ui_messages[player.guild.id] = msg
+            if not hasattr(self, "ui_locks"):
+                self.ui_locks = {}
+            if player.guild.id not in self.ui_locks:
+                self.ui_locks[player.guild.id] = asyncio.Lock()
+                
+            async with self.ui_locks[player.guild.id]:
+                # Create a premium-looking embed
+                embed = self.create_player_embed(player, track)
+                
+                # Delete old UI message
+                old_msg = self.ui_messages.get(player.guild.id)
+                if old_msg:
+                    try:
+                        await old_msg.delete()
+                    except Exception:
+                        pass
+                        
+                # Send new UI
+                view = PlayerUI(self)
+                msg = await text_channel.send(embed=embed, view=view)
+                self.ui_messages[player.guild.id] = msg
         except Exception as e:
             print(f"CRITICAL ERROR Sending Player UI: {e}")
 
@@ -933,9 +939,16 @@ class Music(commands.Cog):
         
         # 10 tracks per page
         chunks = [queue_list[i:i + 10] for i in range(0, len(queue_list), 10)]
+        
+        if not chunks:
+            embed = discord.Embed(title="📋 Music Queue", color=discord.Color.blue())
+            embed.description = f"**🎵 Currently Playing:**\n[{player.current.title}]({player.current.uri})\n\n**⏭️ Upcoming Tracks:**\n*None*"
+            embed.set_footer(text=f"Currently Playing: {player.current.title}")
+            return await ctx.send(embed=embed)
+
         embeds = []
         for i, chunk in enumerate(chunks):
-            embed = discord.Embed(title=f"📋 Music Queue (Page {i+1}/{len(chunks)})", color=discord.Color.blue())
+            embed = discord.Embed(title=f"📋 Music Queue (Page {i+1}/{max(1, len(chunks))})", color=discord.Color.blue())
             description = ""
             
             if i == 0 and player.current:
