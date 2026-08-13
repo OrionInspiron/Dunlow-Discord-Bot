@@ -212,107 +212,30 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
 
-        # Node 1 (Jirayu)
+        # Node 1 (MineCuta)
         node1 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_1", "http://lavalink.jirayu.net:13592"), 
-            password=os.getenv("LAVALINK_PASSWORD_1", "youshallnotpass"),
+            uri=os.getenv("LAVALINK_URI_1", "http://lavav4.minecuta.com:2333"), 
+            password=os.getenv("LAVALINK_PASSWORD_1", "discord.gg/gKuXdHs"),
             retries=3
         )
 
-        # Node 2 (Amane)
+        # Node 2 (Kasawa)
         node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "http://lavalinkv4.serenetia.com:80"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "https://seretia.link/discord"),
+            uri=os.getenv("LAVALINK_URI_2", "http://lava2.kasawa.pro:2334"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "youshallnotpass"),
             retries=3
         )
 
-        # Node 3 (Tapao 1)
+        # Node 3 (AneFaiz)
         node3 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_3", "http://sg1-nodelink.nyxbot.app:3000"), 
-            password=os.getenv("LAVALINK_PASSWORD_3", "nyxbot.app/support"),
-            retries=3
-        )
-
-        # Node 4 (Tapao 2)
-        node4 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_4", "http://sg2-nodelink.nyxbot.app:3000"), 
-            password=os.getenv("LAVALINK_PASSWORD_4", "nyxbot.app/support"),
-            retries=3
-        )
-
-        # Node 5 (G3V)
-        node5 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_5", "http://lava.g3v.co.uk:9008"), 
-            password=os.getenv("LAVALINK_PASSWORD_5", "lavalinklol"),
-            retries=3
-        )
-
-        # Node 6 (Trinium 1)
-        node6 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_6", "http://lavalink.triniumhost.com:4333"), 
-            password=os.getenv("LAVALINK_PASSWORD_6", "free"),
-            retries=3
-        )
-
-        # Node 7 (Trinium 2)
-        node7 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_7", "http://lavalink.triniumhost.com:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_7", "kirito"),
-            retries=3
-        )
-
-        # Node 8 (Trinium 3)
-        node8 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_8", "http://lavalink.triniumhost.com:9008"), 
-            password=os.getenv("LAVALINK_PASSWORD_8", "free"),
-            retries=3
-        )
-
-        # Node 9 (Trinium 4)
-        node9 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_9", "http://lavalink.triniumhost.com:6000"), 
-            password=os.getenv("LAVALINK_PASSWORD_9", "trinium"),
-            retries=3
-        )
-
-        # Node 10 (Nexcloud)
-        node10 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_10", "http://n3.nexcloud.in:2026"), 
-            password=os.getenv("LAVALINK_PASSWORD_10", "nexcloud"),
-            retries=3
-        )
-
-        # Node 11 (VexaNode)
-        node11 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_11", "http://omega.vexanode.cloud:2031"), 
-            password=os.getenv("LAVALINK_PASSWORD_11", "https://discord.vexanode.cloud"),
-            retries=3
-        )
-
-        # Node 12 (Kasawa)
-        node12 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_12", "http://lava2.kasawa.pro:2334"), 
-            password=os.getenv("LAVALINK_PASSWORD_12", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 13 (MineCuta)
-        node13 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_13", "http://lavav4.minecuta.com:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_13", "discord.gg/gKuXdHs"),
-            retries=3
-        )
-
-        # Node 14 (East112)
-        node14 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_14", "http://157.254.192.15:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_14", "youshallnotpass"),
+            uri=os.getenv("LAVALINK_URI_3", "https://lava-v4.millohost.my.id:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_3", "https://discord.gg/mjS5J2K3ep"),
             retries=3
         )
 
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14]
+            nodes_list = [node1, node2, node3]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
