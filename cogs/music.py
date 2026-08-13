@@ -187,7 +187,7 @@ class PlayerUI(discord.ui.View):
         await player.disconnect()
         await interaction.response.send_message("⏹️ Stopped the music and cleared the queue.", ephemeral=False)
 
-REQUEST_CHANNEL_ID = 123456789012345678
+REQUEST_CHANNEL_ID = 1537339097822269490
 
 class Music(commands.Cog):
     def __init__(self, bot):
