@@ -363,7 +363,7 @@ class Music(commands.Cog):
             pos_str = f"{pos_seconds // 60:02d}:{pos_seconds % 60:02d}"
             len_str = f"{len_seconds // 60:02d}:{len_seconds % 60:02d}"
             
-            bar_length = 20
+            bar_length = 12
             percent = position_ms / length_ms if length_ms > 0 else 0
             percent = max(0.0, min(1.0, percent))
             
@@ -374,7 +374,7 @@ class Music(commands.Cog):
             if filled_length == bar_length:
                 bar = "=" * bar_length
                 
-            duration_str = f"`{pos_str}` [{bar}] `{len_str}`"
+            duration_str = f"`{pos_str}`\u00A0[{bar}]\u00A0`{len_str}`"
             
         embed = discord.Embed(
             title="🎧 Now Playing",
