@@ -304,6 +304,7 @@ class Music(commands.Cog):
         categories = ["sponsor", "interaction", "selfpromo"]
         headers = {"Authorization": node.password}
         try:
+            # pyrefly: ignore [missing-import]
             import aiohttp
             async with aiohttp.ClientSession() as session:
                 async with session.put(url, json=categories, headers=headers) as resp:
@@ -313,7 +314,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_wavelink_extra_event(self, payload: wavelink.ExtraEventPayload):
-        if payload.event == "SponsorBlockSegmentSkipped":
+        if payload.data and payload.data.get("type") == "SegmentSkipped":
             player = payload.player
             if player and hasattr(player, "text_channel") and player.text_channel:
                 await player.text_channel.send(embed=self.create_embed("⏭️ Sponsor Skipped", "Automatically skipped a sponsor/promo segment!", discord.Color.green()))
