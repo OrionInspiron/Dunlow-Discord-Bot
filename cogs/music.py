@@ -276,111 +276,34 @@ class Music(commands.Cog):
                 await tmp.delete(delay=10)
 
     async def start_nodes(self):
-
-        # Node 1 (MineCuta)
+        # Based on the deep WebSocket diagnostic, these 3 nodes are PROVEN to work on Render!
         node1 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_1", "http://lavav4.minecuta.com:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_1", "discord.gg/gKuXdHs"),
+            uri=os.getenv("LAVALINK_URI_1", "http://lava2.kasawa.pro:2334"), 
+            password=os.getenv("LAVALINK_PASSWORD_1", "youshallnotpass"),
             retries=3
         )
 
-        # Node 2 (Kasawa)
         node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "http://lava2.kasawa.pro:2334"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "youshallnotpass"),
+            uri=os.getenv("LAVALINK_URI_2", "https://lava-v4.millohost.my.id:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "https://discord.gg/mjS5J2K3ep"),
             retries=3
         )
 
-        # Node 3 (AneFaiz)
         node3 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_3", "https://lava-v4.millohost.my.id:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_3", "https://discord.gg/mjS5J2K3ep"),
+            uri=os.getenv("LAVALINK_URI_3", "http://lavalink.jirayu.net:13592"), 
+            password=os.getenv("LAVALINK_PASSWORD_3", "youshallnotpass"),
             retries=3
         )
 
-        # Node 4 (KryptonByte)
-        node4 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_4", "https://lavalink.kryptonbyte.com:443"),
-            password=os.getenv("LAVALINK_PASSWORD_4", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 5 (Stackryze)
-        node5 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_5", "http://188.245.207.225:2333"),
-            password=os.getenv("LAVALINK_PASSWORD_5", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 6 (Lava-v4 AJP)
-        node6 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_6", "http://lava-v4.ajp.pw:2333"),
-            password=os.getenv("LAVALINK_PASSWORD_6", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 7 (Jirayu)
-        node7 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_7", "http://lavalink.jirayu.net:13592"),
-            password=os.getenv("LAVALINK_PASSWORD_7", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 8 (Lava.link)
-        node8 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_8", "http://lava.link:80"),
-            password=os.getenv("LAVALINK_PASSWORD_8", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 9 (Oops.wtf)
-        node9 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_9", "https://lavalink.oops.wtf:443"),
-            password=os.getenv("LAVALINK_PASSWORD_9", "www.freelavalink.gq"),
-            retries=3
-        )
-
-        # Node 10 (Lexnet)
-        node10 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_10", "https://lava.lexnet.cc:443"),
-            password=os.getenv("LAVALINK_PASSWORD_10", "lexnet_youshallnotpass"),
-            retries=3
-        )
-
-        # Node 11 (Vexanode - Highly Reliable)
-        node11 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_11", "https://node.vexanode.cloud:443"),
-            password=os.getenv("LAVALINK_PASSWORD_11", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 12 (HeavenCloud - Asian)
-        node12 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_12", "https://lava.heavencloud.in:443"),
-            password=os.getenv("LAVALINK_PASSWORD_12", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 13 (Riffy - European)
-        node13 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_13", "https://lavalink.riffy.eu:443"),
-            password=os.getenv("LAVALINK_PASSWORD_13", "youshallnotpass"),
-            retries=3
-        )
-
-        # Node 14 (Discord.Tube)
-        node14 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_14", "https://lavalink.discord.tube:443"),
-            password=os.getenv("LAVALINK_PASSWORD_14", "youshallnotpass"),
-            retries=3
-        )
-
-        # Wavelink will automatically switch to the next available node if one fails/crashes!
-        try:
-            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14]
-            await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
-        except Exception as e:
-            print(f"Failed to connect to one or more nodes: {e}")
+        nodes_list = [node1, node2, node3]
+        
+        # Connect nodes individually so one timeout doesn't crash the entire pool!
+        for node in nodes_list:
+            try:
+                await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
+                print(f"Successfully sent connect request for {node.identifier}")
+            except Exception as e:
+                print(f"Failed to connect to {node.identifier}: {e}")
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
