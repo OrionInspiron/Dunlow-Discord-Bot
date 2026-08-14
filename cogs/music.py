@@ -1117,6 +1117,53 @@ class Music(commands.Cog):
         except Exception as e:
             await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {e}", discord.Color.red()))
 
+    @commands.command(name="testnodes", help="Tests all public nodes from the Render server to see if they are offline or IP blocking.")
+    @commands.has_permissions(administrator=True)
+    async def testnodes(self, ctx):
+        msg = await ctx.send(embed=self.create_embed("🔄 Testing Nodes", "Pinging all 14 nodes from Render. This will take a moment...", discord.Color.gold()))
+        
+        nodes = [
+            "http://lavav4.minecuta.com:2333", "http://lava2.kasawa.pro:2334", "https://lava-v4.millohost.my.id:443",
+            "https://lavalink.kryptonbyte.com:443", "http://188.245.207.225:2333", "http://lava-v4.ajp.pw:2333",
+            "http://lavalink.jirayu.net:13592", "http://lava.link:80", "https://lavalink.oops.wtf:443",
+            "https://lava.lexnet.cc:443", "https://node.vexanode.cloud:443", "https://lava.heavencloud.in:443",
+            "https://lavalink.riffy.eu:443", "https://lavalink.discord.tube:443"
+        ]
+        
+        results = []
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            for uri in nodes:
+                try:
+                    # Test the version endpoint which doesn't require auth on Lavalink
+                    async with session.get(f"{uri}/version", timeout=3) as resp:
+                        if resp.status in [200, 401, 404]:
+                            if resp.status == 404:
+                                results.append(f"✅ `{uri}` - ALIVE (Likely v3)")
+                            else:
+                                results.append(f"✅ `{uri}` - ALIVE (Status: {resp.status})")
+                        elif resp.status == 403:
+                            results.append(f"🚫 `{uri}` - BLOCKED (Render IP Banned)")
+                        else:
+                            results.append(f"⚠️ `{uri}` - Unknown Status {resp.status}")
+                except Exception as e:
+                    results.append(f"❌ `{uri}` - OFFLINE (Timeout)")
+                    
+        embed = discord.Embed(title="📊 Node Diagnostic Test (from Render)", color=discord.Color.blue())
+        
+        # Split results into chunks of 1024 chars if necessary
+        chunk = ""
+        for res in results:
+            if len(chunk) + len(res) + 1 > 1024:
+                embed.add_field(name="Results", value=chunk, inline=False)
+                chunk = res + "\n"
+            else:
+                chunk += res + "\n"
+        if chunk:
+            embed.add_field(name="Results", value=chunk, inline=False)
+            
+        await msg.edit(embed=embed)
+
     @commands.command(name="volume", help="Changes the player volume (1-100).", aliases=['vol'])
     async def volume(self, ctx, vol: int):
         player = ctx.guild.voice_client
