@@ -347,9 +347,37 @@ class Music(commands.Cog):
             retries=3
         )
 
+        # Node 11 (Vexanode - Highly Reliable)
+        node11 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_11", "https://node.vexanode.cloud:443"),
+            password=os.getenv("LAVALINK_PASSWORD_11", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 12 (HeavenCloud - Asian)
+        node12 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_12", "https://lava.heavencloud.in:443"),
+            password=os.getenv("LAVALINK_PASSWORD_12", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 13 (Riffy - European)
+        node13 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_13", "https://lavalink.riffy.eu:443"),
+            password=os.getenv("LAVALINK_PASSWORD_13", "youshallnotpass"),
+            retries=3
+        )
+
+        # Node 14 (Discord.Tube)
+        node14 = wavelink.Node(
+            uri=os.getenv("LAVALINK_URI_14", "https://lavalink.discord.tube:443"),
+            password=os.getenv("LAVALINK_PASSWORD_14", "youshallnotpass"),
+            retries=3
+        )
+
         # Wavelink will automatically switch to the next available node if one fails/crashes!
         try:
-            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10]
+            nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14]
             await wavelink.Pool.connect(nodes=nodes_list, client=self.bot, cache_capacity=100)
         except Exception as e:
             print(f"Failed to connect to one or more nodes: {e}")
