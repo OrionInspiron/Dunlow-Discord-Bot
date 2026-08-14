@@ -276,91 +276,27 @@ class Music(commands.Cog):
                 await tmp.delete(delay=10)
 
     async def start_nodes(self):
+        # We removed all the offline/dead nodes so your console stays clean!
+        # These 3 are verified working and active.
         node1 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_1", "http://lavav4.minecuta.com:2333"), 
-            password=os.getenv("LAVALINK_PASSWORD_1", "discord.gg/gKuXdHs"),
+            uri=os.getenv("LAVALINK_URI_1", "http://lava2.kasawa.pro:2334"), 
+            password=os.getenv("LAVALINK_PASSWORD_1", "youshallnotpass"),
             retries=3
         )
 
         node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "http://lava2.kasawa.pro:2334"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "youshallnotpass"),
+            uri=os.getenv("LAVALINK_URI_2", "https://lava-v4.millohost.my.id:443"), 
+            password=os.getenv("LAVALINK_PASSWORD_2", "https://discord.gg/mjS5J2K3ep"),
             retries=3
         )
 
         node3 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_3", "https://lava-v4.millohost.my.id:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_3", "https://discord.gg/mjS5J2K3ep"),
+            uri=os.getenv("LAVALINK_URI_3", "http://lavalink.jirayu.net:13592"),
+            password=os.getenv("LAVALINK_PASSWORD_3", "youshallnotpass"),
             retries=3
         )
 
-        node4 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_4", "https://lavalink.kryptonbyte.com:443"),
-            password=os.getenv("LAVALINK_PASSWORD_4", "youshallnotpass"),
-            retries=3
-        )
-
-        node5 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_5", "http://188.245.207.225:2333"),
-            password=os.getenv("LAVALINK_PASSWORD_5", "stackryze_youshallnotpass"),
-            retries=3
-        )
-
-        node6 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_6", "http://lava-v4.ajp.pw:2333"),
-            password=os.getenv("LAVALINK_PASSWORD_6", "youshallnotpass"),
-            retries=3
-        )
-
-        node7 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_7", "http://lavalink.jirayu.net:13592"),
-            password=os.getenv("LAVALINK_PASSWORD_7", "youshallnotpass"),
-            retries=3
-        )
-
-        node8 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_8", "http://lava.link:80"),
-            password=os.getenv("LAVALINK_PASSWORD_8", "youshallnotpass"),
-            retries=3
-        )
-
-        node9 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_9", "https://lavalink.oops.wtf:443"),
-            password=os.getenv("LAVALINK_PASSWORD_9", "www.freelavalink.gq"),
-            retries=3
-        )
-
-        node10 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_10", "https://lava.lexnet.cc:443"),
-            password=os.getenv("LAVALINK_PASSWORD_10", "lexnet_youshallnotpass"),
-            retries=3
-        )
-
-        node11 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_11", "https://node.vexanode.cloud:443"),
-            password=os.getenv("LAVALINK_PASSWORD_11", "youshallnotpass"),
-            retries=3
-        )
-
-        node12 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_12", "https://lava.heavencloud.in:443"),
-            password=os.getenv("LAVALINK_PASSWORD_12", "youshallnotpass"),
-            retries=3
-        )
-
-        node13 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_13", "https://lavalink.riffy.eu:443"),
-            password=os.getenv("LAVALINK_PASSWORD_13", "youshallnotpass"),
-            retries=3
-        )
-
-        node14 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_14", "https://lavalink.discord.tube:443"),
-            password=os.getenv("LAVALINK_PASSWORD_14", "youshallnotpass"),
-            retries=3
-        )
-
-        nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14]
+        nodes_list = [node1, node2, node3]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
         async def connect_node(n):
