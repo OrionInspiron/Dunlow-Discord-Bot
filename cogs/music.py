@@ -1120,38 +1120,58 @@ class Music(commands.Cog):
     @commands.command(name="testnodes", help="Tests all public nodes from the Render server to see if they are offline or IP blocking.")
     @commands.has_permissions(administrator=True)
     async def testnodes(self, ctx):
-        msg = await ctx.send(embed=self.create_embed("🔄 Testing Nodes", "Pinging all 14 nodes from Render. This will take a moment...", discord.Color.gold()))
+        msg = await ctx.send(embed=self.create_embed("🔄 Testing Nodes", "Performing deep WebSocket handshake test on all nodes from Render...", discord.Color.gold()))
         
-        nodes = [
-            "http://lavav4.minecuta.com:2333", "http://lava2.kasawa.pro:2334", "https://lava-v4.millohost.my.id:443",
-            "https://lavalink.kryptonbyte.com:443", "http://188.245.207.225:2333", "http://lava-v4.ajp.pw:2333",
-            "http://lavalink.jirayu.net:13592", "http://lava.link:80", "https://lavalink.oops.wtf:443",
-            "https://lava.lexnet.cc:443", "https://node.vexanode.cloud:443", "https://lava.heavencloud.in:443",
-            "https://lavalink.riffy.eu:443", "https://lavalink.discord.tube:443"
-        ]
+        nodes_dict = {
+            "http://lavav4.minecuta.com:2333": "discord.gg/gKuXdHs",
+            "http://lava2.kasawa.pro:2334": "youshallnotpass",
+            "https://lava-v4.millohost.my.id:443": "https://discord.gg/mjS5J2K3ep",
+            "https://lavalink.kryptonbyte.com:443": "youshallnotpass",
+            "http://188.245.207.225:2333": "youshallnotpass",
+            "http://lava-v4.ajp.pw:2333": "youshallnotpass",
+            "http://lavalink.jirayu.net:13592": "youshallnotpass",
+            "http://lava.link:80": "youshallnotpass",
+            "https://lavalink.oops.wtf:443": "www.freelavalink.gq",
+            "https://lava.lexnet.cc:443": "lexnet_youshallnotpass",
+            "https://node.vexanode.cloud:443": "youshallnotpass",
+            "https://lava.heavencloud.in:443": "youshallnotpass",
+            "https://lavalink.riffy.eu:443": "youshallnotpass",
+            "https://lavalink.discord.tube:443": "youshallnotpass"
+        }
         
         results = []
         import aiohttp
         async with aiohttp.ClientSession() as session:
-            for uri in nodes:
+            for uri, pwd in nodes_dict.items():
                 try:
-                    # Test the version endpoint which doesn't require auth on Lavalink
-                    async with session.get(f"{uri}/version", timeout=3) as resp:
-                        if resp.status in [200, 401, 404]:
-                            if resp.status == 404:
-                                results.append(f"✅ `{uri}` - ALIVE (Likely v3)")
-                            else:
-                                results.append(f"✅ `{uri}` - ALIVE (Status: {resp.status})")
-                        elif resp.status == 403:
-                            results.append(f"🚫 `{uri}` - BLOCKED (Render IP Banned)")
-                        else:
-                            results.append(f"⚠️ `{uri}` - Unknown Status {resp.status}")
+                    # Convert HTTP URI to WS URI
+                    ws_uri = uri.replace("http://", "ws://").replace("https://", "wss://") + "/v4/websocket"
+                    headers = {
+                        "Authorization": pwd,
+                        "User-Id": str(self.bot.user.id),
+                        "Client-Name": "Wavelink/3.2.0"
+                    }
+                    async with session.ws_connect(ws_uri, headers=headers, timeout=3) as ws:
+                        results.append(f"✅ `{uri}` - WS CONNECTED SUCCESSFULLY!")
+                        await ws.close()
+                except aiohttp.WSServerHandshakeError as e:
+                    if e.status == 403:
+                        results.append(f"🚫 `{uri}` - 403 BLOCKED (Render IP Banned)")
+                    elif e.status == 404:
+                        results.append(f"⚠️ `{uri}` - 404 NOT FOUND (Likely Lavalink v3)")
+                    elif e.status == 401:
+                        results.append(f"🔒 `{uri}` - 401 WRONG PASSWORD")
+                    else:
+                        results.append(f"⚠️ `{uri}` - WS Error {e.status}")
                 except Exception as e:
-                    results.append(f"❌ `{uri}` - OFFLINE (Timeout)")
+                    err_str = str(e)
+                    if "Timeout" in err_str or "timeout" in err_str.lower():
+                        results.append(f"❌ `{uri}` - OFFLINE (Timeout)")
+                    else:
+                        results.append(f"❌ `{uri}` - {err_str[:20]}")
                     
-        embed = discord.Embed(title="📊 Node Diagnostic Test (from Render)", color=discord.Color.blue())
+        embed = discord.Embed(title="📊 Deep WebSocket Diagnostic Test (from Render)", color=discord.Color.blue())
         
-        # Split results into chunks of 1024 chars if necessary
         chunk = ""
         for res in results:
             if len(chunk) + len(res) + 1 > 1024:
