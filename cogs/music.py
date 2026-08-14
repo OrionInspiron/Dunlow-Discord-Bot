@@ -874,6 +874,31 @@ class Music(commands.Cog):
             
             await ctx.send(embed=self.create_embed("❌ Error", f"Could not find any song matching **'{query}'** in the queue.", discord.Color.red()))
 
+    @commands.command(name="dedupe", help="Removes duplicate songs from the queue.", aliases=['removeduplicates'])
+    async def dedupe(self, ctx):
+        player = ctx.guild.voice_client
+        if not player or player.queue.is_empty:
+            return await ctx.send(embed=self.create_embed("❌ Error", "The queue is empty.", discord.Color.red()))
+            
+        original_count = len(player.queue)
+        seen_uris = set()
+        unique_tracks = []
+        
+        for track in player.queue:
+            if track.uri not in seen_uris:
+                seen_uris.add(track.uri)
+                unique_tracks.append(track)
+                
+        if len(unique_tracks) == original_count:
+            return await ctx.send(embed=self.create_embed("ℹ️ Info", "There are no duplicate tracks in the queue.", discord.Color.blue()))
+            
+        player.queue.clear()
+        for track in unique_tracks:
+            player.queue.put(track)
+            
+        removed = original_count - len(unique_tracks)
+        await ctx.send(embed=self.create_embed("🧹 Queue Cleaned", f"Successfully removed **{removed}** duplicate tracks from the queue!", discord.Color.green()))
+
     @commands.command(name="seek", help="Seeks to a specific position in the track (in seconds).")
     async def seek(self, ctx, seconds: int):
         player = ctx.guild.voice_client
