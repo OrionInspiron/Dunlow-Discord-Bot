@@ -366,9 +366,9 @@ class Music(commands.Cog):
         async def connect_node(n):
             try:
                 await wavelink.Pool.connect(nodes=[n], client=self.bot, cache_capacity=100)
-                print(f"Successfully sent connect request for {n.identifier}")
+                print(f"\033[32m[WAVELINK] ✔\033[0m Sent connect request to: \033[36m{n.identifier}\033[0m")
             except Exception as e:
-                print(f"Failed to connect to {n.identifier}: {e}")
+                print(f"\033[31m[WAVELINK] ✖\033[0m Failed to connect to \033[36m{n.identifier}\033[0m: {e}")
 
         await asyncio.gather(*(connect_node(n) for n in nodes_list))
 
@@ -446,11 +446,11 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
-        print(f"Wavelink Node connected: {payload.node!r} | Resumed: {payload.resumed}")
+        print(f"\033[1;32m[WAVELINK] 🟢 NODE CONNECTED AND READY:\033[0m \033[36m{payload.node.uri}\033[0m")
 
     @commands.Cog.listener()
     async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
-        print(f"Wavelink Node disconnected: {payload.node.identifier}. Attempting player migration...")
+        print(f"\033[1;31m[WAVELINK] 🔴 NODE DISCONNECTED:\033[0m \033[36m{payload.node.identifier}\033[0m - Attempting player migration...")
         
         for vc in self.bot.voice_clients:
             if isinstance(vc, wavelink.Player) and vc.node == payload.node:
