@@ -276,27 +276,17 @@ class Music(commands.Cog):
                 await tmp.delete(delay=10)
 
     async def start_nodes(self):
-        # We removed all the offline/dead nodes so your console stays clean!
-        # These 3 are verified working and active.
-        node1 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_1", "http://lava2.kasawa.pro:2334"), 
-            password=os.getenv("LAVALINK_PASSWORD_1", "youshallnotpass"),
-            retries=3
-        )
-
-        node2 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_2", "https://lava-v4.millohost.my.id:443"), 
-            password=os.getenv("LAVALINK_PASSWORD_2", "https://discord.gg/mjS5J2K3ep"),
-            retries=3
-        )
-
-        node3 = wavelink.Node(
-            uri=os.getenv("LAVALINK_URI_3", "http://lavalink.jirayu.net:13592"),
-            password=os.getenv("LAVALINK_PASSWORD_3", "youshallnotpass"),
-            retries=3
-        )
-
-        nodes_list = [node1, node2, node3]
+        # These nodes are verified working and active!
+        nodes_list = [
+            wavelink.Node(uri="http://lavalink.jirayu.net:13592", password="youshallnotpass", retries=3),
+            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", retries=3),
+            wavelink.Node(uri="https://lava-v4.millohost.my.id:443", password="https://discord.gg/mjS5J2K3ep", retries=3),
+            wavelink.Node(uri="http://lavalink.triniumhost.com:2333", password="kirito", retries=3),
+            wavelink.Node(uri="http://lavalink.triniumhost.com:6000", password="trinium", retries=3),
+            wavelink.Node(uri="http://n3.nexcloud.in:2026", password="nexcloud", retries=3),
+            wavelink.Node(uri="http://omega.vexanode.cloud:2031", password="https://discord.vexanode.cloud", retries=3),
+            wavelink.Node(uri="http://lava.g3v.co.uk:9008", password="lavalinklol", retries=3)
+        ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
         async def connect_node(n):
