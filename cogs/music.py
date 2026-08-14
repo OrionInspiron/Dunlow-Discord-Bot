@@ -362,13 +362,15 @@ class Music(commands.Cog):
 
         nodes_list = [node1, node2, node3, node4, node5, node6, node7, node8, node9, node10, node11, node12, node13, node14]
         
-        # Connect nodes individually so one timeout doesn't crash the entire pool!
-        for node in nodes_list:
+        # Connect nodes concurrently so timeouts don't hang the bot startup!
+        async def connect_node(n):
             try:
-                await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
-                print(f"Successfully sent connect request for {node.identifier}")
+                await wavelink.Pool.connect(nodes=[n], client=self.bot, cache_capacity=100)
+                print(f"Successfully sent connect request for {n.identifier}")
             except Exception as e:
-                print(f"Failed to connect to {node.identifier}: {e}")
+                print(f"Failed to connect to {n.identifier}: {e}")
+
+        await asyncio.gather(*(connect_node(n) for n in nodes_list))
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
