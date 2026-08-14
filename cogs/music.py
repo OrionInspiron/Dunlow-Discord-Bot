@@ -378,8 +378,10 @@ class Music(commands.Cog):
         categories = ["sponsor", "interaction", "selfpromo"]
         headers = {"Authorization": node.password}
         try:
-            async with node.client.session.put(url, json=categories, headers=headers) as resp:
-                pass
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.put(url, json=categories, headers=headers) as resp:
+                    pass
         except Exception as e:
             print(f"SponsorBlock error: {e}")
 
