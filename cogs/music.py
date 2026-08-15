@@ -278,14 +278,24 @@ class Music(commands.Cog):
     async def start_nodes(self):
         # These nodes are verified working and active!
         nodes_list = [
-            wavelink.Node(uri="http://lavalink.jirayu.net:13592", password="youshallnotpass", retries=3),
-            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", retries=3),
+            # SSL Nodes
+            wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", retries=3),
+            wavelink.Node(uri="https://lavalink.jirayu.net:443", password="youshallnotpass", retries=3),
             wavelink.Node(uri="https://lava-v4.millohost.my.id:443", password="https://discord.gg/mjS5J2K3ep", retries=3),
+            wavelink.Node(uri="https://lavalink-v4.triniumhost.com:443", password="free", retries=3),
+            wavelink.Node(uri="https://nodelink.triniumhost.com:443", password="free", retries=3),
+            wavelink.Node(uri="https://nodelink-02.triniumhost.com:443", password="trinium", retries=3),
+            # Non-SSL Nodes
+            wavelink.Node(uri="http://lavalink.triniumhost.com:4333", password="free", retries=3),
             wavelink.Node(uri="http://lavalink.triniumhost.com:2333", password="kirito", retries=3),
+            wavelink.Node(uri="http://lavalink.triniumhost.com:9008", password="free", retries=3),
             wavelink.Node(uri="http://lavalink.triniumhost.com:6000", password="trinium", retries=3),
+            wavelink.Node(uri="http://lava.g3v.co.uk:9008", password="lavalinklol", retries=3),
             wavelink.Node(uri="http://n3.nexcloud.in:2026", password="nexcloud", retries=3),
             wavelink.Node(uri="http://omega.vexanode.cloud:2031", password="https://discord.vexanode.cloud", retries=3),
-            wavelink.Node(uri="http://lava.g3v.co.uk:9008", password="lavalinklol", retries=3)
+            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", retries=3),
+            wavelink.Node(uri="http://lavav4.minecuta.com:2333", password="discord.gg/gKuXdHs", retries=3),
+            wavelink.Node(uri="http://157.254.192.15:2333", password="youshallnotpass", retries=3)
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
