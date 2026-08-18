@@ -281,16 +281,17 @@ class Music(commands.Cog):
             # Your Local Server (Best performance, 0 lag)
             wavelink.Node(uri="http://127.0.0.1:2333", password="youshallnotpass", identifier="Local Node (Recommended)", retries=3),
             
-            # Reliable Public Nodes
-            wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", identifier="Serenetia (HTTPS)", retries=3),
-            wavelink.Node(uri="http://lavalinkv4.serenetia.com:80", password="https://seretia.link/discord", identifier="Serenetia (HTTP)", retries=3),
-            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", identifier="Kasawa Pro", retries=3),
-            wavelink.Node(uri="http://188.245.207.225:2333", password="youshallnotpass", identifier="Stackryze (HTTP)", retries=3),
+            # --- PUBLIC NODES DISABLED ---
+            # Public nodes are constantly rate-limited or IP banned by Discord, causing the "Voice Lag" timeout error.
+            # Only use your local node above by running start_lavalink.bat
             
-            # Extra Public Nodes (May be offline intermittently)
-            wavelink.Node(uri="https://lavalink.jirayu.net:443", password="youshallnotpass", identifier="Jirayu (HTTPS)", retries=3),
-            wavelink.Node(uri="https://lava-v4.millohost.my.id:443", password="https://discord.gg/mjS5J2K3ep", identifier="Millo (HTTPS)", retries=3),
-            wavelink.Node(uri="https://lavalink-v4.triniumhost.com:443", password="free", identifier="Trinium (HTTPS)", retries=3)
+            # wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", identifier="Serenetia (HTTPS)", retries=3),
+            # wavelink.Node(uri="http://lavalinkv4.serenetia.com:80", password="https://seretia.link/discord", identifier="Serenetia (HTTP)", retries=3),
+            # wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", identifier="Kasawa Pro", retries=3),
+            # wavelink.Node(uri="http://188.245.207.225:2333", password="youshallnotpass", identifier="Stackryze (HTTP)", retries=3),
+            # wavelink.Node(uri="https://lavalink.jirayu.net:443", password="youshallnotpass", identifier="Jirayu (HTTPS)", retries=3),
+            # wavelink.Node(uri="https://lava-v4.millohost.my.id:443", password="https://discord.gg/mjS5J2K3ep", identifier="Millo (HTTPS)", retries=3),
+            # wavelink.Node(uri="https://lavalink-v4.triniumhost.com:443", password="free", identifier="Trinium (HTTPS)", retries=3)
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
