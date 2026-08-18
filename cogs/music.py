@@ -691,6 +691,20 @@ class Music(commands.Cog):
         except Exception as e:
             await msg.edit(content=f"❌ FAILED! Pure discord.py also timed out: {e}\n\n**Conclusion:** This is 100% a Discord issue. Your bot either lacks 'Connect' permissions, or the Voice Region for this server is completely broken on Discord's end.")
 
+    @commands.command(name="checkperms", help="Checks if the bot has permission to join the VC.")
+    async def checkperms(self, ctx):
+        if not ctx.author.voice:
+            return await ctx.send("You must be in a voice channel.")
+        vc = ctx.author.voice.channel
+        perms = vc.permissions_for(ctx.guild.me)
+        
+        embed = self.create_embed("🔍 Permissions Check for " + vc.name, "")
+        embed.add_field(name="Connect", value="✅ Yes" if perms.connect else "❌ NO (This causes the timeout!)", inline=False)
+        embed.add_field(name="Speak", value="✅ Yes" if perms.speak else "❌ NO", inline=False)
+        embed.add_field(name="View Channel", value="✅ Yes" if perms.view_channel else "❌ NO", inline=False)
+        
+        await ctx.send(embed=embed)
+
     @commands.command(name="play", help="Plays a track from YouTube or a URL.", aliases=['p'])
     async def play(self, ctx, *, search: str):
         if not ctx.author.voice:
