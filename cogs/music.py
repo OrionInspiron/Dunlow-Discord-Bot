@@ -278,9 +278,10 @@ class Music(commands.Cog):
     async def start_nodes(self):
         # These nodes are verified working and active!
         nodes_list = [
-            wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", retries=3),
-            wavelink.Node(uri="http://lavalinkv4.serenetia.com:80", password="https://seretia.link/discord", retries=3),
-            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", retries=3)
+            wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", identifier="Serenetia (HTTPS)", retries=3),
+            wavelink.Node(uri="http://lavalinkv4.serenetia.com:80", password="https://seretia.link/discord", identifier="Serenetia (HTTP)", retries=3),
+            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", identifier="Kasawa Pro", retries=3),
+            wavelink.Node(uri="http://188.245.207.225:2333", password="youshallnotpass", identifier="Stackryze (HTTP)", retries=3)
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
