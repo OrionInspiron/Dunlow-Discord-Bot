@@ -1051,7 +1051,7 @@ class Music(commands.Cog):
             if new_node and new_node.identifier == old_node.identifier:
                 return await ctx.send(embed=self.create_embed("ℹ️ Info", f"Already connected to `{new_node.identifier}`.", discord.Color.gold()))
                 
-            await player.switch_node(new_node)
+            await asyncio.create_task(player.switch_node(new_node))
             await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
         except Exception as e:
             await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {e}", discord.Color.red()))
