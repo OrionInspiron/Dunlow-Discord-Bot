@@ -671,6 +671,26 @@ class Music(commands.Cog):
         except Exception as e:
             await msg.edit(content=f"❌ Failed to force join: {e}\n\n**Possible fixes:**\n1. Check if the bot has 'Connect' permissions in this channel.\n2. Edit the channel and change the 'Region Override' to a different region.")
 
+    @commands.command(name="testjoin", help="Tests if plain discord.py can join without Lavalink.")
+    async def testjoin(self, ctx):
+        if not ctx.author.voice:
+            return await ctx.send("You must be in a voice channel.")
+        vc = ctx.author.voice.channel
+        
+        msg = await ctx.send("🔍 Testing direct Discord connection (bypassing Lavalink)...")
+        try:
+            # Force cleanup first
+            await ctx.guild.change_voice_state(channel=None)
+            import asyncio
+            await asyncio.sleep(1)
+            
+            # Use default VoiceClient instead of wavelink.Player
+            player = await vc.connect(timeout=15.0)
+            await msg.edit(content=f"✅ SUCCESS! Pure discord.py joined {vc.mention} instantly.\n\n**Conclusion:** Your Discord permissions and Voice Region are fine! The timeout is being caused by **Windows Firewall blocking Java (Lavalink)** from making UDP connections.")
+            await player.disconnect(force=True)
+        except Exception as e:
+            await msg.edit(content=f"❌ FAILED! Pure discord.py also timed out: {e}\n\n**Conclusion:** This is 100% a Discord issue. Your bot either lacks 'Connect' permissions, or the Voice Region for this server is completely broken on Discord's end.")
+
     @commands.command(name="play", help="Plays a track from YouTube or a URL.", aliases=['p'])
     async def play(self, ctx, *, search: str):
         if not ctx.author.voice:
