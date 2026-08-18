@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 title Local Lavalink Server
 color 0A
 echo Starting Local Lavalink Server...
