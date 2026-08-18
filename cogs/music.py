@@ -652,6 +652,25 @@ class Music(commands.Cog):
             else:
                 await ctx.send(embed=self.create_embed("❌ Error", f"Failed to join: {e}", discord.Color.red()))
 
+    @commands.command(name="forcejoin", help="Forces the bot to clear ghost states and join the voice channel.")
+    async def forcejoin(self, ctx):
+        if not ctx.author.voice:
+            return await ctx.send("You must be in a voice channel.")
+        vc = ctx.author.voice.channel
+        
+        msg = await ctx.send("🔄 Cleaning up ghost connections and forcing join...")
+        try:
+            # Force Discord to clear any stuck voice states for the bot
+            await ctx.guild.change_voice_state(channel=None)
+            import asyncio
+            await asyncio.sleep(2)
+            
+            player = await vc.connect(cls=wavelink.Player, timeout=30.0)
+            player.autoplay = wavelink.AutoPlayMode.enabled
+            await msg.edit(content=f"✅ Successfully force-joined {vc.mention}!")
+        except Exception as e:
+            await msg.edit(content=f"❌ Failed to force join: {e}\n\n**Possible fixes:**\n1. Check if the bot has 'Connect' permissions in this channel.\n2. Edit the channel and change the 'Region Override' to a different region.")
+
     @commands.command(name="play", help="Plays a track from YouTube or a URL.", aliases=['p'])
     async def play(self, ctx, *, search: str):
         if not ctx.author.voice:
