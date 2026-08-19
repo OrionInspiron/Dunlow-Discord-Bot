@@ -1,20 +1,27 @@
 import asyncio
 import aiohttp
+import json
+
+nodes = [
+    {"uri": "https://v4.lavalink.info:443", "password": "try_lavalink.info", "identifier": "Lavalink.info"},
+    {"uri": "http://lava.link:80", "password": "youshallnotpass", "identifier": "Lava.link"},
+    {"uri": "https://lava.link:443", "password": "youshallnotpass", "identifier": "Lava.link HTTPS"},
+    {"uri": "http://lavalink.oops.wtf:2000", "password": "www.freelavalink.com", "identifier": "freelavalink"}
+]
+
+async def check(session, node):
+    try:
+        async with session.get(f"{node['uri']}/version", timeout=3.0) as r:
+            return f"{node['identifier']}: {r.status} {await r.text()}"
+    except Exception as e:
+        return f"{node['identifier']}: FAILED - {e}"
 
 async def test():
-    urls = [
-        "https://lavalinkv4.serenetia.com:443/version",
-        "http://lava2.kasawa.pro:2334/version",
-        "http://188.245.207.225:2333/version",
-        "http://lavalinkv4.serenetia.com:80/version",
-        "https://lavalink.jirayu.net:443/version"
-    ]
     async with aiohttp.ClientSession() as session:
-        for url in urls:
-            try:
-                async with session.get(url, timeout=5) as resp:
-                    print(f"{url}: {resp.status} - {await resp.text()}")
-            except Exception as e:
-                print(f"{url}: Failed - {e}")
+        tasks = [check(session, node) for node in nodes]
+        results = await asyncio.gather(*tasks)
+        for r in results:
+            print(r)
 
-asyncio.run(test())
+loop = asyncio.new_event_loop()
+loop.run_until_complete(test())

@@ -280,6 +280,9 @@ class Music(commands.Cog):
     async def start_nodes(self):
         # These nodes are verified working and active!
         node_configs = [
+            # Local Node (useful when testing on your laptop or running your own Lavalink server)
+            {"uri": "http://127.0.0.1:2333", "password": "youshallnotpass", "identifier": "Local Node", "retries": 1},
+            
             # Reliable Public Nodes
             {"uri": "https://lavalinkv4.serenetia.com:443", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTPS)", "retries": 3},
             {"uri": "http://lava2.kasawa.pro:2334", "password": "youshallnotpass", "identifier": "Kasawa Pro", "retries": 3},
