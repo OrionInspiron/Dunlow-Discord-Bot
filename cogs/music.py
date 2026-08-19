@@ -378,7 +378,16 @@ class Music(commands.Cog):
                 try:
                     # Give discord a tiny moment to clean up the old ghost connection
                     await asyncio.sleep(2)
-                    player = await asyncio.wait_for(before.channel.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
+                    async def _do_connect():
+                        return await before.channel.connect(cls=wavelink.Player, timeout=None)
+                    
+                    task = asyncio.create_task(_do_connect())
+                    done, pending = await asyncio.wait([task], timeout=120.0)
+                    
+                    if not done:
+                        task.cancel()
+                        raise asyncio.TimeoutError("Connection timed out")
+                    player = task.result()
                     player.autoplay = wavelink.AutoPlayMode.enabled
                     player.inactive_timeout = 0
                     player.inactive_channel_tokens = 0
@@ -645,7 +654,16 @@ class Music(commands.Cog):
 
         try:
             if not player:
-                player = await asyncio.wait_for(vc.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
+                async def _do_connect():
+                    return await vc.connect(cls=wavelink.Player, timeout=None)
+                
+                task = asyncio.create_task(_do_connect())
+                done, pending = await asyncio.wait([task], timeout=120.0)
+                
+                if not done:
+                    task.cancel()
+                    raise asyncio.TimeoutError("Connection timed out")
+                player = task.result()
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
@@ -725,7 +743,16 @@ class Music(commands.Cog):
             player = ctx.guild.voice_client
             
             if not player:
-                player = await asyncio.wait_for(vc.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
+                async def _do_connect():
+                    return await vc.connect(cls=wavelink.Player, timeout=None)
+                
+                task = asyncio.create_task(_do_connect())
+                done, pending = await asyncio.wait([task], timeout=120.0)
+                
+                if not done:
+                    task.cancel()
+                    raise asyncio.TimeoutError("Connection timed out")
+                player = task.result()
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
