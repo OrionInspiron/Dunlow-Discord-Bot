@@ -1,4 +1,5 @@
 import inspect
 import wavelink
 
-print(inspect.getsource(wavelink.Node._update_player))
+print("fetch_tracks:")
+print(inspect.getsource(wavelink.Pool.fetch_tracks))

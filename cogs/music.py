@@ -378,7 +378,7 @@ class Music(commands.Cog):
                 try:
                     # Give discord a tiny moment to clean up the old ghost connection
                     await asyncio.sleep(2)
-                    player = await before.channel.connect(cls=wavelink.Player, timeout=120.0)
+                    player = await asyncio.wait_for(before.channel.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
                     player.autoplay = wavelink.AutoPlayMode.enabled
                     player.inactive_timeout = 0
                     player.inactive_channel_tokens = 0
@@ -645,7 +645,7 @@ class Music(commands.Cog):
 
         try:
             if not player:
-                player = await vc.connect(cls=wavelink.Player, timeout=120.0)
+                player = await asyncio.wait_for(vc.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
@@ -725,7 +725,7 @@ class Music(commands.Cog):
             player = ctx.guild.voice_client
             
             if not player:
-                player = await vc.connect(cls=wavelink.Player, timeout=120.0)
+                player = await asyncio.wait_for(vc.connect(cls=wavelink.Player, timeout=None), timeout=120.0)
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
