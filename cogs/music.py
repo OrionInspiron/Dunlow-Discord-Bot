@@ -309,6 +309,10 @@ class Music(commands.Cog):
                 print(f"\033[32m[WAVELINK] ✔\033[0m Sent connect request to: \033[36m{identifier}\033[0m")
             except Exception as e:
                 print(f"\033[31m[WAVELINK] ✖\033[0m Failed to connect to \033[36m{identifier}\033[0m: {e}")
+                try:
+                    await n.close()
+                except Exception:
+                    pass
 
         await asyncio.gather(*(connect_node(c) for c in node_configs))
 
@@ -376,7 +380,7 @@ class Music(commands.Cog):
                 try:
                     # Give discord a tiny moment to clean up the old ghost connection
                     await asyncio.sleep(2)
-                    player = await before.channel.connect(cls=wavelink.Player)
+                    player = await before.channel.connect(cls=wavelink.Player, timeout=120.0)
                     player.autoplay = wavelink.AutoPlayMode.enabled
                     player.inactive_timeout = 0
                     player.inactive_channel_tokens = 0
@@ -643,7 +647,7 @@ class Music(commands.Cog):
 
         try:
             if not player:
-                player = await vc.connect(cls=wavelink.Player)
+                player = await vc.connect(cls=wavelink.Player, timeout=120.0)
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
