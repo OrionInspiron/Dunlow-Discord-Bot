@@ -1,0 +1,3 @@
+http://lava2.kasawa.pro:2334|youshallnotpass
+http://lavalinkv4.serenetia.com:80|https://seretia.link/discord
+https://lavalinkv4.serenetia.com:443|https://seretia.link/discord
