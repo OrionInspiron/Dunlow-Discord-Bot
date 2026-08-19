@@ -277,24 +277,29 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
         # These nodes are verified working and active!
-        nodes_list = [
+        node_configs = [
             # Reliable Public Nodes
-            wavelink.Node(uri="https://lavalinkv4.serenetia.com:443", password="https://seretia.link/discord", identifier="Serenetia (HTTPS)", retries=3),
-            wavelink.Node(uri="http://lava2.kasawa.pro:2334", password="youshallnotpass", identifier="Kasawa Pro", retries=3),
-            wavelink.Node(uri="http://188.245.207.225:2333", password="youshallnotpass", identifier="Stackryze (HTTP)", retries=3),
-            wavelink.Node(uri="http://lavalinkv4.serenetia.com:80", password="https://seretia.link/discord", identifier="Serenetia (HTTP)", retries=3),
-            wavelink.Node(uri="https://lavalink.jirayu.net:443", password="youshallnotpass", identifier="Jirayu (HTTPS)", retries=3),
+            {"uri": "https://lavalinkv4.serenetia.com:443", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTPS)", "retries": 3},
+            {"uri": "http://lava2.kasawa.pro:2334", "password": "youshallnotpass", "identifier": "Kasawa Pro", "retries": 3},
+            {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
+            {"uri": "http://lavalinkv4.serenetia.com:80", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTP)", "retries": 3},
+            {"uri": "https://lavalink.jirayu.net:443", "password": "youshallnotpass", "identifier": "Jirayu (HTTPS)", "retries": 3},
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
-        async def connect_node(n):
+        async def connect_node(config):
+            identifier = config["identifier"]
+            if hasattr(wavelink.Pool, "nodes") and identifier in wavelink.Pool.nodes:
+                return
             try:
+                # Instantiate Node only if we are actually going to connect it!
+                n = wavelink.Node(**config)
                 await wavelink.Pool.connect(nodes=[n], client=self.bot, cache_capacity=100)
-                print(f"\033[32m[WAVELINK] ✔\033[0m Sent connect request to: \033[36m{n.identifier}\033[0m")
+                print(f"\033[32m[WAVELINK] ✔\033[0m Sent connect request to: \033[36m{identifier}\033[0m")
             except Exception as e:
-                print(f"\033[31m[WAVELINK] ✖\033[0m Failed to connect to \033[36m{n.identifier}\033[0m: {e}")
+                print(f"\033[31m[WAVELINK] ✖\033[0m Failed to connect to \033[36m{identifier}\033[0m: {e}")
 
-        await asyncio.gather(*(connect_node(n) for n in nodes_list))
+        await asyncio.gather(*(connect_node(c) for c in node_configs))
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node

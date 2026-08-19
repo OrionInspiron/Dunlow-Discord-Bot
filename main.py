@@ -15,6 +15,18 @@ class Bot(commands.Bot):
         intents.message_content = True
         super().__init__(command_prefix="f#", intents=intents, help_command=None)
 
+    async def close(self):
+        # Gracefully shut down wavelink nodes to prevent "Unclosed client session" warnings
+        try:
+            import wavelink
+            if hasattr(wavelink.Pool, "nodes"):
+                # wavelink.Pool.close() might not exist in all v3/v4 versions, so we close nodes manually
+                for node in list(wavelink.Pool.nodes.values()):
+                    await node.close()
+        except Exception:
+            pass
+        await super().close()
+
     async def setup_hook(self):
         # Enable ANSI colors on Windows CMD
         os.system("")
