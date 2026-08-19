@@ -24,11 +24,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 async def get_stream_url(query: str):
+    class DummyLogger:
+        def debug(self, msg): pass
+        def warning(self, msg): pass
+        def error(self, msg): pass
+        
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
         'default_search': 'ytsearch',
+        'logger': DummyLogger()
     }
     def get_info():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -782,7 +788,12 @@ class Music(commands.Cog):
                 tmp_msg = await ctx.send(embed=self.create_embed("? Fetching Playlist...", "Downloading playlist metadata locally. This might take a second...", discord.Color.gold()))
                 
                 def extract_flat():
-                    ydl_opts = {'extract_flat': True, 'quiet': True}
+                    class DummyLogger:
+                        def debug(self, msg): pass
+                        def warning(self, msg): pass
+                        def error(self, msg): pass
+                        
+                    ydl_opts = {'extract_flat': True, 'quiet': True, 'logger': DummyLogger()}
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         return ydl.extract_info(search, download=False)
                         
