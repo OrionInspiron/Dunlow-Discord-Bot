@@ -299,6 +299,10 @@ class Music(commands.Cog):
             {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
             {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
             {"uri": "https://lavalink-v4.triniumhost.com:443", "password": "free", "identifier": "TriniumHost (HTTPS)", "retries": 3},
+            {"uri": "http://node.itzrandom.cloud:9000", "password": "lavalink@itzrandomcloud", "identifier": "ItzRandom", "retries": 3},
+            {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
+            {"uri": "http://LavaLink4.lightsout.in:40069", "password": "LightsoutOwnsElves", "identifier": "Lightsout v4", "retries": 3},
+            {"uri": "https://v4.lavalink.rocks:443", "password": "horizxon.tech", "identifier": "Horizxon", "retries": 3},
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
