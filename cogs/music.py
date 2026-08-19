@@ -727,7 +727,7 @@ class Music(commands.Cog):
             player = ctx.guild.voice_client
             
             if not player:
-                player = await vc.connect(cls=wavelink.Player)
+                player = await vc.connect(cls=wavelink.Player, timeout=120.0)
                 player.autoplay = wavelink.AutoPlayMode.enabled
                 player.inactive_timeout = 0
                 player.inactive_channel_tokens = 0
