@@ -1,2 +1,4 @@
+import inspect
 import wavelink
-print(wavelink.Player.connect.__code__.co_varnames)
+
+print(inspect.getsource(wavelink.Node._update_player))

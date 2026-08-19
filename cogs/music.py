@@ -281,9 +281,7 @@ class Music(commands.Cog):
             # Reliable Public Nodes
             {"uri": "https://lavalinkv4.serenetia.com:443", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTPS)", "retries": 3},
             {"uri": "http://lava2.kasawa.pro:2334", "password": "youshallnotpass", "identifier": "Kasawa Pro", "retries": 3},
-            {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
             {"uri": "http://lavalinkv4.serenetia.com:80", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTP)", "retries": 3},
-            {"uri": "https://lavalink.jirayu.net:443", "password": "youshallnotpass", "identifier": "Jirayu (HTTPS)", "retries": 3},
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
