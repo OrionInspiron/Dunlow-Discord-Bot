@@ -253,6 +253,8 @@ class Music(commands.Cog):
             try:
                 tracks = await wavelink.Playable.search(message.content)
                 if not tracks:
+                    tracks = await wavelink.Playable.search(message.content, source=wavelink.TrackSource.SoundCloud)
+                if not tracks:
                     tmp = await message.channel.send(embed=self.create_embed("❌ Not Found", f"Could not find any tracks for: `{message.content}`", discord.Color.red()))
                     await tmp.delete(delay=10)
                     return
@@ -769,6 +771,10 @@ class Music(commands.Cog):
             for attempt in range(max_attempts):
                 try:
                     tracks = await wavelink.Playable.search(search)
+                    
+                    if not tracks:
+                        tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud)
+                        
                     if not tracks:
                         return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
 
@@ -1264,6 +1270,8 @@ class Music(commands.Cog):
             added = 0
             for uri in tracks:
                 results = await wavelink.Playable.search(uri)
+                if not results:
+                    results = await wavelink.Playable.search(uri, source=wavelink.TrackSource.SoundCloud)
                 if results:
                     if isinstance(results, wavelink.Playlist):
                         player.queue.put(results[0])
@@ -1462,6 +1470,8 @@ class Music(commands.Cog):
                     search_query = f"{track_name} {artist_name}".strip()
                     
                     tracks = await wavelink.Playable.search(search_query)
+                    if not tracks:
+                        tracks = await wavelink.Playable.search(search_query, source=wavelink.TrackSource.SoundCloud)
                     if not tracks:
                         return await ctx.send(embed=self.create_embed("❌ Error", f"Found lyrics for **{search_query}** but couldn't find the audio track.", discord.Color.red()))
                         
