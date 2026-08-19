@@ -1,25 +1,18 @@
 import asyncio
 import aiohttp
 
-async def test_node(uri, pwd):
-    ws_uri = uri.replace('http://', 'ws://').replace('https://', 'wss://') + '/v4/websocket'
+async def test():
+    url = "wss://lavalinkv4.serenetia.com:443/v4/websocket"
     headers = {
-        'Authorization': pwd,
-        'User-Id': '123456789',
-        'Client-Name': 'Wavelink/3.2.0'
+        "Authorization": "https://seretia.link/discord",
+        "Client-Name": "Wavelink/3.1.2"
     }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(ws_uri, headers=headers, timeout=5) as ws:
-                print(f'? {uri} - WS CONNECTED SUCCESSFULLY!')
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.ws_connect(url, headers=headers) as ws:
+                print("WS Connected!")
                 await ws.close()
-    except aiohttp.WSServerHandshakeError as e:
-        print(f'Handshake Error {uri}: {e.status}')
-    except Exception as e:
-        print(f'Error {uri}: {e}')
+        except Exception as e:
+            print(f"WS Failed: {e}")
 
-async def main():
-    await test_node('http://lava2.kasawa.pro:2334', 'youshallnotpass')
-    await test_node('http://lavalink.jirayu.net:13592', 'youshallnotpass')
-
-asyncio.run(main())
+asyncio.run(test())

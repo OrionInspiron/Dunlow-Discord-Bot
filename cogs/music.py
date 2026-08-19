@@ -290,7 +290,18 @@ class Music(commands.Cog):
         async def connect_node(config):
             identifier = config["identifier"]
             if hasattr(wavelink.Pool, "nodes") and identifier in wavelink.Pool.nodes:
-                return
+                old_node = wavelink.Pool.nodes[identifier]
+                if getattr(old_node, "client", None) != self.bot:
+                    # Stale node from previous bot instance (hot-reload)!
+                    if hasattr(wavelink.Pool, "_Pool__nodes"):
+                        wavelink.Pool._Pool__nodes.pop(identifier, None)
+                    try:
+                        await old_node.close()
+                    except Exception:
+                        pass
+                else:
+                    return
+                    
             try:
                 # Instantiate Node only if we are actually going to connect it!
                 n = wavelink.Node(**config)
