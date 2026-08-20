@@ -299,20 +299,20 @@ class Music(commands.Cog):
             {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
             {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
             {"uri": "https://lavalink-v4.triniumhost.com:443", "password": "free", "identifier": "TriniumHost (HTTPS)", "retries": 3},
-            {"uri": "http://node.itzrandom.cloud:9000", "password": "lavalink@itzrandomcloud", "identifier": "ItzRandom", "retries": 3},
+
             {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
             {"uri": "http://LavaLink4.lightsout.in:40069", "password": "LightsoutOwnsElves", "identifier": "Lightsout v4", "retries": 3},
             {"uri": "https://v4.lavalink.rocks:443", "password": "horizxon.tech", "identifier": "Horizxon", "retries": 3},
             {"uri": "https://lavalink.oops.wtf", "password": "www.freelavalink.pw", "identifier": "Oops WTF", "retries": 3},
             {"uri": "https://lava-v4.ajieblogs.eu.org:443", "password": "https://dsc.gg/ajidevserver", "identifier": "AjieBlogs", "retries": 3},
             {"uri": "https://lavalink.lexnet.cc:443", "password": "lexn3t", "identifier": "Lexnet", "retries": 3},
-            {"uri": "https://node.rovelstars.com:443", "password": "youshallnotpass", "identifier": "RovelStars", "retries": 3},
+
             
             # New Extra Nodes Added
-            {"uri": "https://lava.link", "password": "youshallnotpass", "identifier": "Lava.link (HTTPS)", "retries": 3},
-            {"uri": "https://node.sylph.cloud:443", "password": "sylph", "identifier": "Sylph Cloud", "retries": 3},
+
+
             {"uri": "https://lavalink.darrennathanael.com:443", "password": "youshallnotpass", "identifier": "Darren Nathanael", "retries": 3},
-            {"uri": "https://node.1s.gay:443", "password": "1s.gay", "identifier": "1s.gay Node", "retries": 3},
+
             {"uri": "http://45.147.248.88:2333", "password": "youshallnotpass", "identifier": "Lava Node EU", "retries": 3},
         ]
         
