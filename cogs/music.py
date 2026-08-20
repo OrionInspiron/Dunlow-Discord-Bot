@@ -285,7 +285,7 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
         # These nodes are verified working and active!
-        node_configs = [
+        self.node_configs = [
             # Local Node (useful when testing on your laptop or running your own Lavalink server)
             {"uri": "http://127.0.0.1:2333", "password": "youshallnotpass", "identifier": "Local Node", "retries": 1},
             
@@ -344,7 +344,7 @@ class Music(commands.Cog):
                 except Exception:
                     pass
 
-        await asyncio.gather(*(connect_node(c) for c in node_configs))
+        await asyncio.gather(*(connect_node(c) for c in self.node_configs))
 
     async def setup_sponsorblock(self, player: wavelink.Player):
         node = player.node
@@ -1227,7 +1227,7 @@ class Music(commands.Cog):
 
     @commands.command(name="switchnode", help="Manually switches the current Lavalink node to a new one (Admin only).")
     @commands.has_permissions(administrator=True)
-    async def switchnode(self, ctx, identifier: str = None):
+    async def switchnode(self, ctx, *, identifier: str = None):
         player = ctx.guild.voice_client
         if not player:
             return await ctx.send(embed=self.create_embed("❌ Error", "I am not connected to a voice channel.", discord.Color.red()))
@@ -1266,9 +1266,44 @@ class Music(commands.Cog):
                 
             await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
         except Exception as e:
-            await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {e}", discord.Color.red()))
+            import traceback
+            tb = traceback.format_exc()
+            print(f"Error in switchnode:\n{tb}")
+            await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {type(e).__name__} - {e}", discord.Color.red()))
 
 
+
+    @commands.command(name="nodelist", help="Checks which Lavalink servers are online and offline (Admin only).", aliases=["nodes"])
+    @commands.has_permissions(administrator=True)
+    async def nodelist(self, ctx):
+        if not hasattr(self, "node_configs"):
+            return await ctx.send(embed=self.create_embed("❌ Error", "Node configurations not initialized.", discord.Color.red()))
+            
+        all_nodes = []
+        if hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
+            all_nodes = list(wavelink.Pool.nodes.values())
+            
+        connected_identifiers = [n.identifier for n in all_nodes]
+        
+        online_count = 0
+        offline_count = 0
+        desc = ""
+        
+        for config in self.node_configs:
+            identifier = config["identifier"]
+            if identifier in connected_identifiers:
+                desc += f"🟢 **{identifier}** (Online)\n"
+                online_count += 1
+            else:
+                desc += f"🔴 **{identifier}** (Offline)\n"
+                offline_count += 1
+                
+        embed = discord.Embed(
+            title=f"📡 Lavalink Nodes Status ({online_count}/{online_count+offline_count} Online)",
+            description=desc,
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
 
     @commands.command(name="volume", help="Changes the player volume (1-100).", aliases=['vol'])
     async def volume(self, ctx, vol: int):
