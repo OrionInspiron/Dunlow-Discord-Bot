@@ -298,11 +298,11 @@ class Music(commands.Cog):
             {"uri": "https://lavalink.jirayu.net:443", "password": "youshallnotpass", "identifier": "Jirayu (HTTPS)", "retries": 3},
             {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
             {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
-            {"uri": "https://lavalink-v4.triniumhost.com:443", "password": "free", "identifier": "TriniumHost (HTTPS)", "retries": 3},
+
 
             {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
             {"uri": "http://LavaLink4.lightsout.in:40069", "password": "LightsoutOwnsElves", "identifier": "Lightsout v4", "retries": 3},
-            {"uri": "https://v4.lavalink.rocks:443", "password": "horizxon.tech", "identifier": "Horizxon", "retries": 3},
+
             {"uri": "https://lavalink.oops.wtf", "password": "www.freelavalink.pw", "identifier": "Oops WTF", "retries": 3},
             {"uri": "https://lava-v4.ajieblogs.eu.org:443", "password": "https://dsc.gg/ajidevserver", "identifier": "AjieBlogs", "retries": 3},
             {"uri": "https://lavalink.lexnet.cc:443", "password": "lexn3t", "identifier": "Lexnet", "retries": 3},
@@ -313,7 +313,7 @@ class Music(commands.Cog):
 
             {"uri": "https://lavalink.darrennathanael.com:443", "password": "youshallnotpass", "identifier": "Darren Nathanael", "retries": 3},
 
-            {"uri": "http://45.147.248.88:2333", "password": "youshallnotpass", "identifier": "Lava Node EU", "retries": 3},
+
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
