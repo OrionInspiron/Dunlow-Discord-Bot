@@ -303,6 +303,17 @@ class Music(commands.Cog):
             {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
             {"uri": "http://LavaLink4.lightsout.in:40069", "password": "LightsoutOwnsElves", "identifier": "Lightsout v4", "retries": 3},
             {"uri": "https://v4.lavalink.rocks:443", "password": "horizxon.tech", "identifier": "Horizxon", "retries": 3},
+            {"uri": "https://lavalink.oops.wtf", "password": "www.freelavalink.pw", "identifier": "Oops WTF", "retries": 3},
+            {"uri": "https://lava-v4.ajieblogs.eu.org:443", "password": "https://dsc.gg/ajidevserver", "identifier": "AjieBlogs", "retries": 3},
+            {"uri": "https://lavalink.lexnet.cc:443", "password": "lexn3t", "identifier": "Lexnet", "retries": 3},
+            {"uri": "https://node.rovelstars.com:443", "password": "youshallnotpass", "identifier": "RovelStars", "retries": 3},
+            
+            # New Extra Nodes Added
+            {"uri": "https://lava.link", "password": "youshallnotpass", "identifier": "Lava.link (HTTPS)", "retries": 3},
+            {"uri": "https://node.sylph.cloud:443", "password": "sylph", "identifier": "Sylph Cloud", "retries": 3},
+            {"uri": "https://lavalink.darrennathanael.com:443", "password": "youshallnotpass", "identifier": "Darren Nathanael", "retries": 3},
+            {"uri": "https://node.1s.gay:443", "password": "1s.gay", "identifier": "1s.gay Node", "retries": 3},
+            {"uri": "http://45.147.248.88:2333", "password": "youshallnotpass", "identifier": "Lava Node EU", "retries": 3},
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
@@ -1224,19 +1235,17 @@ class Music(commands.Cog):
         old_node = player.node
         
         try:
-            # Try to get nodes dynamically
             all_nodes = []
             if hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
                 all_nodes = list(wavelink.Pool.nodes.values())
             
             if identifier:
-                new_node = wavelink.Pool.get_node(identifier=identifier)
+                new_node = wavelink.Pool.nodes.get(identifier)
                 if not new_node:
                     available = ", ".join([n.identifier for n in all_nodes]) if all_nodes else "Unknown"
                     return await ctx.send(embed=self.create_embed("❌ Error", f"Node `{identifier}` not found.\nAvailable nodes: `{available}`", discord.Color.red()))
             else:
                 if not all_nodes:
-                    # Fallback if Pool.nodes doesn't work as expected
                     new_node = wavelink.Pool.get_node()
                 else:
                     available_nodes = [n for n in all_nodes if n.identifier != old_node.identifier]
@@ -1247,7 +1256,14 @@ class Music(commands.Cog):
             if new_node and new_node.identifier == old_node.identifier:
                 return await ctx.send(embed=self.create_embed("ℹ️ Info", f"Already connected to `{new_node.identifier}`.", discord.Color.gold()))
                 
-            await asyncio.create_task(player.switch_node(new_node))
+            current_track = player.current
+            current_position = player.position
+            
+            await player.switch_node(new_node)
+            
+            if current_track:
+                await player.play(current_track, start=current_position)
+                
             await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
         except Exception as e:
             await ctx.send(embed=self.create_embed("❌ Error", f"Failed to switch node: {e}", discord.Color.red()))

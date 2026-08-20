@@ -14,9 +14,10 @@ class Owner(commands.Cog):
         await ctx.send("Restarting bot...")
         print(f"[SYS] Restart command invoked by {ctx.author}. Restarting...")
         
-        # We use sys.executable to ensure we restart with the exact same python interpreter
-        # sys.argv contains the original arguments passed to the script
-        os.execv(sys.executable, ['python'] + sys.argv)
+        # Signal the main script to restart the bot internally instead of spawning new processes.
+        # This completely fixes the multiple instances and GUI launcher issues!
+        self.bot.should_restart = True
+        await self.bot.close()
 
 async def setup(bot):
     await bot.add_cog(Owner(bot))

@@ -174,7 +174,10 @@ class BotDashboard(ctk.CTk):
         if self.is_running and self.bot and self.bot.is_ready():
             self.status_label.configure(text="Status: ONLINE", text_color="green")
             
-            ping = round(self.bot.latency * 1000)
+            try:
+                ping = round(self.bot.latency * 1000)
+            except (OverflowError, ValueError):
+                ping = 0
             self.ping_label.configure(text=f"Ping: {ping} ms")
             
             servers = self.bot.guilds

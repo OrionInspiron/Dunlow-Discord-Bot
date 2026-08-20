@@ -22,7 +22,10 @@ class Bot(commands.Bot):
             if hasattr(wavelink.Pool, "nodes"):
                 # wavelink.Pool.close() might not exist in all v3/v4 versions, so we close nodes manually
                 for node in list(wavelink.Pool.nodes.values()):
-                    await node.close()
+                    try:
+                        await asyncio.wait_for(node.close(), timeout=2.0)
+                    except:
+                        pass
         except Exception:
             pass
         await super().close()
@@ -41,9 +44,14 @@ class Bot(commands.Bot):
         print("\033[33m[SYS]\033[0m Booting up modules...")
         
         # Load cogs
+        import sys
         for filename in os.listdir("./cogs"):
             if filename.endswith(".py"):
-                await self.load_extension(f"cogs.{filename[:-3]}")
+                cog_name = f"cogs.{filename[:-3]}"
+                # Force reload by removing from sys.modules if it exists
+                if cog_name in sys.modules:
+                    del sys.modules[cog_name]
+                await self.load_extension(cog_name)
                 print(f"\033[32m  [+]\033[0m Loaded extension: \033[36m{filename}\033[0m")
         # Sync slash commands removed as requested
         print("\033[90m====================================================\033[0m")
@@ -67,8 +75,18 @@ async def main():
     # Start the dummy web server
     start_server()
 
-    async with bot:
-        await bot.start(discord_token)
+    while True:
+        bot = Bot()
+        bot.should_restart = False
+        async with bot:
+            await bot.start(discord_token)
+            
+        if getattr(bot, "should_restart", False):
+            print("[SYS] Bot is restarting internally... Please wait.")
+            await asyncio.sleep(2)
+            continue
+        else:
+            break
 
 if __name__ == "__main__":
     asyncio.run(main())
