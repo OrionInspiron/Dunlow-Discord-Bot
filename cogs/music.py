@@ -648,7 +648,7 @@ class Music(commands.Cog):
                 import random
                 new_node = random.choice(available_nodes)
                 try:
-                    await player.switch_node(new_node)
+                    await self.bot.loop.create_task(player.switch_node(new_node))
                     migrated = True
                     player.fail_count = fail_count + 1
                     if hasattr(player, "text_channel") and player.text_channel:
@@ -1281,7 +1281,7 @@ class Music(commands.Cog):
             current_track = player.current
             current_position = player.position
             
-            await player.switch_node(new_node)
+            await self.bot.loop.create_task(player.switch_node(new_node))
             
             if current_track:
                 await player.play(current_track, start=current_position)
