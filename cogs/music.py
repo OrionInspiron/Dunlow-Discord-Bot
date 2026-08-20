@@ -535,7 +535,7 @@ class Music(commands.Cog):
             self.skip_votes[player.guild.id].clear()
             
         track = payload.track
-        
+        player.fail_count = 0
 
         try:
             if not hasattr(self, "ui_locks"):
@@ -639,14 +639,36 @@ class Music(commands.Cog):
             
         track = payload.track
         
-        # Prevent infinite loops if this is the only song left in the queue
-        if player.queue.is_empty:
-            if hasattr(player, "text_channel") and player.text_channel:
-                await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. It has been removed from the queue to prevent looping.", discord.Color.red()))
+        fail_count = getattr(player, "fail_count", 0)
+        
+        migrated = False
+        if fail_count < 10 and hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
+            available_nodes = [n for n in wavelink.Pool.nodes.values() if n.identifier != player.node.identifier]
+            if available_nodes:
+                import random
+                new_node = random.choice(available_nodes)
+                try:
+                    await player.switch_node(new_node)
+                    migrated = True
+                    player.fail_count = fail_count + 1
+                    if hasattr(player, "text_channel") and player.text_channel:
+                        await player.text_channel.send(embed=self.create_embed("🔄 Auto-Failover", f"YouTube rate-limited the server. Jumping to `{new_node.identifier}`...", discord.Color.orange()), delete_after=10)
+                except Exception:
+                    pass
+
+        if migrated:
+            player.queue.put_at(0, track)
+            if not player.playing:
+                await player.play(player.queue.get())
         else:
-            player.queue.put(track)
-            if hasattr(player, "text_channel") and player.text_channel:
-                await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** due to a server error. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
+            player.fail_count = 0 # Reset for the next track
+            if player.queue.is_empty:
+                if hasattr(player, "text_channel") and player.text_channel:
+                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** (All nodes blocked). Removed from queue.", discord.Color.red()))
+            else:
+                player.queue.put(track)
+                if hasattr(player, "text_channel") and player.text_channel:
+                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. Moved to the end of the playlist.", discord.Color.red()))
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
