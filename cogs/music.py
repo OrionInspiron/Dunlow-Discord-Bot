@@ -313,11 +313,15 @@ class Music(commands.Cog):
 
             
             # New Extra Nodes Added
-
-
+            {"uri": "http://lava.g3v.co.uk:9008", "password": "lavalinklol", "identifier": "g3v.co.uk", "retries": 3},
+            {"uri": "http://lavalink.triniumhost.com:9008", "password": "free", "identifier": "Trinium (9008)", "retries": 3},
+            {"uri": "http://n3.nexcloud.in:2026", "password": "nexcloud", "identifier": "Nexcloud", "retries": 3},
+            {"uri": "http://omega.vexanode.cloud:2031", "password": "https://discord.vexanode.cloud", "identifier": "Vexanode", "retries": 3},
+            {"uri": "http://lavav4.minecuta.com:2333", "password": "discord.gg/gKuXdHs", "identifier": "Minecuta", "retries": 3},
+            {"uri": "http://157.254.192.15:2333", "password": "youshallnotpass", "identifier": "Server 157", "retries": 3},
+            {"uri": "https://lavalink-v4.triniumhost.com:443", "password": "free", "identifier": "Trinium (HTTPS)", "retries": 3},
+            {"uri": "https://nodelink.triniumhost.com:443", "password": "free", "identifier": "Trinium NodeLink", "retries": 3},
             {"uri": "https://lavalink.darrennathanael.com:443", "password": "youshallnotpass", "identifier": "Darren Nathanael", "retries": 3},
-
-
         ]
         
         # Connect nodes concurrently so timeouts don't hang the bot startup!
