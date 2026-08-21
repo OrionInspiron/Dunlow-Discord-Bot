@@ -538,30 +538,10 @@ class Music(commands.Cog):
         player.fail_count = 0
 
         try:
-            if not hasattr(self, "ui_locks"):
-                self.ui_locks = {}
-            if player.guild.id not in self.ui_locks:
-                self.ui_locks[player.guild.id] = asyncio.Lock()
-                
-            async with self.ui_locks[player.guild.id]:
-                # Create a premium-looking embed
-                embed = self.create_player_embed(player, track)
-                
-                # Delete old UI message
-                old_msg = self.ui_messages.get(player.guild.id)
-                if old_msg:
-                    try:
-                        await old_msg.delete()
-                    except Exception:
-                        pass
-                        
-                # Send new UI
-                view = PlayerUI(self)
-                msg = await text_channel.send(embed=embed, view=view)
-                self.ui_messages[player.guild.id] = msg
+            await self.resend_ui(player, track)
         except Exception as e:
             print(f"CRITICAL ERROR Sending Player UI: {e}")
-
+            
         # Log to MongoDB in the background so it doesn't delay the UI!
         async def log_to_db():
             requester_id = getattr(track.extras, "requester_id", None) if hasattr(track, "extras") else None
@@ -581,36 +561,7 @@ class Music(commands.Cog):
                 
         self.bot.loop.create_task(log_to_db())
 
-        async def update_player_ui():
-            nonlocal msg
-            try:
-                while True:
-                    await asyncio.sleep(5)
-                    if not player or not getattr(player, "playing", False):
-                        break
-                    if player.current != track:
-                        break
-                        
-                    updated_embed = self.create_player_embed(player, track)
-                    try:
-                        if player.text_channel.last_message_id != msg.id:
-                            try:
-                                await msg.delete()
-                            except:
-                                pass
-                            view = PlayerUI(self)
-                            msg = await player.text_channel.send(embed=updated_embed, view=view)
-                            self.ui_messages[player.guild.id] = msg
-                        else:
-                            await msg.edit(embed=updated_embed)
-                    except discord.NotFound:
-                        break
-                    except discord.HTTPException:
-                        pass
-            except Exception as e:
-                print(f"Error updating UI: {e}")
-                
-        self.bot.loop.create_task(update_player_ui())
+
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
@@ -1247,6 +1198,63 @@ class Music(commands.Cog):
         await player.skip(force=True)
         await ctx.send(embed=self.create_embed("⏭️ Skipped To", f"Skipped directly to **{target_track.title}** (Track #{index}).", discord.Color.green()))
 
+    async def resend_ui(self, player, track):
+        if not track: return
+        
+        text_channel = getattr(player, "text_channel", None)
+        if not text_channel and player.guild.id in getattr(self, "text_channels", {}):
+            text_channel = self.text_channels[player.guild.id]
+            player.text_channel = text_channel
+            
+        if not text_channel: return
+        
+        if not hasattr(self, "ui_locks"):
+            self.ui_locks = {}
+        if player.guild.id not in self.ui_locks:
+            self.ui_locks[player.guild.id] = asyncio.Lock()
+            
+        async with self.ui_locks[player.guild.id]:
+            embed = self.create_player_embed(player, track)
+            
+            old_msg = self.ui_messages.get(player.guild.id)
+            if old_msg:
+                try:
+                    await old_msg.delete()
+                except Exception:
+                    pass
+                    
+            view = PlayerUI(self)
+            msg = await text_channel.send(embed=embed, view=view)
+            self.ui_messages[player.guild.id] = msg
+            
+            async def update_player_ui():
+                nonlocal msg
+                try:
+                    while True:
+                        await asyncio.sleep(5)
+                        if not player or not getattr(player, "playing", False):
+                            break
+                        if player.current != track:
+                            break
+                            
+                        updated_embed = self.create_player_embed(player, track)
+                        try:
+                            if player.text_channel.last_message_id != msg.id:
+                                try: await msg.delete()
+                                except: pass
+                                view = PlayerUI(self)
+                                msg = await player.text_channel.send(embed=updated_embed, view=view)
+                                self.ui_messages[player.guild.id] = msg
+                            else:
+                                await msg.edit(embed=updated_embed)
+                        except discord.NotFound:
+                            break
+                        except discord.HTTPException:
+                            pass
+                except Exception as e:
+                    pass
+            self.bot.loop.create_task(update_player_ui())
+
     @commands.command(name="switchnode", help="Manually switches the current Lavalink node to a new one (Admin only).")
     @commands.has_permissions(administrator=True)
     async def switchnode(self, ctx, *, identifier: str = None):
@@ -1285,6 +1293,7 @@ class Music(commands.Cog):
             
             if current_track:
                 await player.play(current_track, start=current_position)
+                self.bot.loop.create_task(self.resend_ui(player, current_track))
                 
             await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
         except Exception as e:
