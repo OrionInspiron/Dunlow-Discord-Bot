@@ -271,12 +271,16 @@ class Music(commands.Cog):
                     added = await player.queue.put_wait(track)
                     tmp = await message.channel.send(embed=self.create_embed("✅ Playlist Added", f"Added **{track.name}** ({added} tracks) to the queue.", discord.Color.green()))
                     if not player.playing:
-                        await player.play(player.queue.get())
+                        current = player.queue.get()
+                        await player.play(current)
+                        self.bot.loop.create_task(self.resend_ui(player, current))
                 else:
                     await player.queue.put_wait(track)
                     tmp = await message.channel.send(embed=self.create_embed("✅ Track Added", f"Added **{track.title}** to the queue.", discord.Color.green()))
                     if not player.playing:
-                        await player.play(player.queue.get())
+                        current = player.queue.get()
+                        await player.play(current)
+                        self.bot.loop.create_task(self.resend_ui(player, current))
                         
                 await tmp.delete(delay=10)
             except Exception as e:
@@ -858,6 +862,7 @@ class Music(commands.Cog):
                         if not player.playing:
                             await player.set_volume(30)
                             await player.play(added[0])
+                            self.bot.loop.create_task(self.resend_ui(player, added[0]))
                             for t in added[1:]:
                                 player.queue.put(t)
                         else:
@@ -873,7 +878,7 @@ class Music(commands.Cog):
                         if not player.playing:
                             await player.set_volume(30)
                             await player.play(track)
-                            pass # UI is handled automatically by on_wavelink_track_start
+                            self.bot.loop.create_task(self.resend_ui(player, track))
                         else:
                             player.queue.put(track)
                             embed = discord.Embed(title="✅ Added to Queue", description=f"**[{track.title}]({track.uri})**", color=discord.Color.green())
