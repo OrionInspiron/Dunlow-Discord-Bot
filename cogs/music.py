@@ -625,10 +625,18 @@ class Music(commands.Cog):
             if player.queue.is_empty:
                 if hasattr(player, "text_channel") and player.text_channel:
                     await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** (All nodes blocked). Removed from queue.", discord.Color.red()))
+                await player.skip(force=True)
             else:
                 player.queue.put(track)
                 if hasattr(player, "text_channel") and player.text_channel:
                     await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. Moved to the end of the playlist.", discord.Color.red()))
+                await player.skip(force=True)
+                
+                # Kickstart the next song if Wavelink went idle
+                if not player.playing and not player.queue.is_empty:
+                    next_track = player.queue.get()
+                    await player.play(next_track)
+                    self.bot.loop.create_task(self.resend_ui(player, next_track))
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
@@ -642,10 +650,18 @@ class Music(commands.Cog):
         if player.queue.is_empty:
             if hasattr(player, "text_channel") and player.text_channel:
                 await player.text_channel.send(embed=self.create_embed("⚠️ Track Stuck", f"**{track.title}** got stuck loading. It has been removed from the queue to prevent looping.", discord.Color.red()))
+            await player.skip(force=True)
         else:
             player.queue.put(track)
             if hasattr(player, "text_channel") and player.text_channel:
                 await player.text_channel.send(embed=self.create_embed("⚠️ Track Stuck", f"**{track.title}** got stuck loading. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
+            await player.skip(force=True)
+            
+            # Wavelink might go idle if the track was stuck, so we kickstart the next one
+            if not player.playing and not player.queue.is_empty:
+                next_track = player.queue.get()
+                await player.play(next_track)
+                self.bot.loop.create_task(self.resend_ui(player, next_track))
 
 
 
