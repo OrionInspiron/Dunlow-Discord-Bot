@@ -288,8 +288,10 @@ class Music(commands.Cog):
                 await tmp.delete(delay=10)
 
     async def start_nodes(self):
-        # These nodes are verified working and active!
         self.node_configs = [
+            # Primary Node (Requested by User)
+            {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
+            
             # Local Node (useful when testing on your laptop or running your own Lavalink server)
             {"uri": "http://127.0.0.1:2333", "password": "youshallnotpass", "identifier": "Local Node", "retries": 1},
             
@@ -301,7 +303,6 @@ class Music(commands.Cog):
             # Other Public Nodes (Sometimes offline/blocked, but good to have as backups)
             {"uri": "https://lavalink.jirayu.net:443", "password": "youshallnotpass", "identifier": "Jirayu (HTTPS)", "retries": 3},
             {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
-            {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
 
 
             {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
@@ -1260,9 +1261,16 @@ class Music(commands.Cog):
                             break
                         except discord.HTTPException:
                             pass
+                except asyncio.CancelledError:
+                    pass
                 except Exception as e:
                     pass
-            self.bot.loop.create_task(update_player_ui())
+            
+            if not hasattr(self, "ui_tasks"):
+                self.ui_tasks = {}
+            if player.guild.id in self.ui_tasks and not self.ui_tasks[player.guild.id].done():
+                self.ui_tasks[player.guild.id].cancel()
+            self.ui_tasks[player.guild.id] = self.bot.loop.create_task(update_player_ui())
 
     @commands.command(name="switchnode", help="Manually switches the current Lavalink node to a new one (Admin only).")
     @commands.has_permissions(administrator=True)
