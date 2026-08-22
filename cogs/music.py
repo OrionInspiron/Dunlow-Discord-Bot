@@ -296,32 +296,16 @@ class Music(commands.Cog):
             {"uri": "http://127.0.0.1:2333", "password": "youshallnotpass", "identifier": "Local Node", "retries": 1},
             
             # Reliable Public Nodes
+            {"uri": "https://sg1-nodelink-ssl.nyxbot.app:443", "password": "nyxbot.app/support", "identifier": "NYX Singapore 1", "retries": 3},
+            {"uri": "https://sg2-nodelink-ssl.nyxbot.app:443", "password": "nyxbot.app/support", "identifier": "NYX Singapore 2", "retries": 3},
+            {"uri": "http://fr1-nodelink.nyxbot.app:3000", "password": "nyxbot.app/support", "identifier": "NYX Frankfurt 1", "retries": 3},
+            {"uri": "https://nodelink.triniumhost.com:443", "password": "free", "identifier": "Trinium BR 1", "retries": 3},
+            {"uri": "https://nodelink-02.triniumhost.com:443", "password": "trinium", "identifier": "Trinium BR 2", "retries": 3},
             {"uri": "https://lavalinkv4.serenetia.com:443", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTPS)", "retries": 3},
             {"uri": "http://lava2.kasawa.pro:2334", "password": "youshallnotpass", "identifier": "Kasawa Pro", "retries": 3},
             {"uri": "http://lavalinkv4.serenetia.com:80", "password": "https://seretia.link/discord", "identifier": "Serenetia (HTTP)", "retries": 3},
-            
-            # Other Public Nodes (Sometimes offline/blocked, but good to have as backups)
             {"uri": "https://lavalink.jirayu.net:443", "password": "youshallnotpass", "identifier": "Jirayu (HTTPS)", "retries": 3},
-            {"uri": "http://188.245.207.225:2333", "password": "youshallnotpass", "identifier": "Stackryze (HTTP)", "retries": 3},
-
-
-            {"uri": "http://v4.bloggertasher.ru:26040", "password": "apexnodes.xyz", "identifier": "ApexNodes v4", "retries": 3},
-            {"uri": "http://LavaLink4.lightsout.in:40069", "password": "LightsoutOwnsElves", "identifier": "Lightsout v4", "retries": 3},
-
-            {"uri": "https://lavalink.oops.wtf", "password": "www.freelavalink.pw", "identifier": "Oops WTF", "retries": 3},
-            {"uri": "https://lava-v4.ajieblogs.eu.org:443", "password": "https://dsc.gg/ajidevserver", "identifier": "AjieBlogs", "retries": 3},
-            {"uri": "https://lavalink.lexnet.cc:443", "password": "lexn3t", "identifier": "Lexnet", "retries": 3},
-
-            
-            # New Extra Nodes Added
-            {"uri": "http://lava.g3v.co.uk:9008", "password": "lavalinklol", "identifier": "g3v.co.uk", "retries": 3},
-            {"uri": "http://lavalink.triniumhost.com:9008", "password": "free", "identifier": "Trinium (9008)", "retries": 3},
-            {"uri": "http://n3.nexcloud.in:2026", "password": "nexcloud", "identifier": "Nexcloud", "retries": 3},
-            {"uri": "http://omega.vexanode.cloud:2031", "password": "https://discord.vexanode.cloud", "identifier": "Vexanode", "retries": 3},
             {"uri": "http://lavav4.minecuta.com:2333", "password": "discord.gg/gKuXdHs", "identifier": "Minecuta", "retries": 3},
-            {"uri": "http://157.254.192.15:2333", "password": "youshallnotpass", "identifier": "Server 157", "retries": 3},
-            {"uri": "https://lavalink-v4.triniumhost.com:443", "password": "free", "identifier": "Trinium (HTTPS)", "retries": 3},
-            {"uri": "https://nodelink.triniumhost.com:443", "password": "free", "identifier": "Trinium NodeLink", "retries": 3},
             {"uri": "https://lavalink.darrennathanael.com:443", "password": "youshallnotpass", "identifier": "Darren Nathanael", "retries": 3},
         ]
         
@@ -630,13 +614,11 @@ class Music(commands.Cog):
                 player.queue.put(track)
                 if hasattr(player, "text_channel") and player.text_channel:
                     await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. Moved to the end of the playlist.", discord.Color.red()))
-                await player.skip(force=True)
                 
-                # Kickstart the next song if Wavelink went idle
-                if not player.playing and not player.queue.is_empty:
-                    next_track = player.queue.get()
-                    await player.play(next_track)
-                    self.bot.loop.create_task(self.resend_ui(player, next_track))
+                try:
+                    await player.skip(force=True)
+                except Exception as e:
+                    print(f"Failed to skip stuck track: {e}")
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
@@ -655,13 +637,11 @@ class Music(commands.Cog):
             player.queue.put(track)
             if hasattr(player, "text_channel") and player.text_channel:
                 await player.text_channel.send(embed=self.create_embed("⚠️ Track Stuck", f"**{track.title}** got stuck loading. I've moved it to the end of the playlist to try again later!", discord.Color.orange()))
-            await player.skip(force=True)
             
-            # Wavelink might go idle if the track was stuck, so we kickstart the next one
-            if not player.playing and not player.queue.is_empty:
-                next_track = player.queue.get()
-                await player.play(next_track)
-                self.bot.loop.create_task(self.resend_ui(player, next_track))
+            try:
+                await player.skip(force=True)
+            except Exception as e:
+                print(f"Failed to skip stuck track: {e}")
 
 
 
@@ -795,75 +775,6 @@ class Music(commands.Cog):
             player.text_channel = ctx.channel
             self.text_channels[ctx.guild.id] = ctx.channel
 
-            is_yt_playlist = "youtube.com/playlist?list=" in search or ("youtu.be/" in search and "list=" in search)
-
-            if is_yt_playlist:
-                tmp_msg = await ctx.send(embed=self.create_embed("? Fetching Playlist...", "Downloading playlist metadata locally. This might take a second...", discord.Color.gold()))
-                
-                def extract_flat():
-                    class DummyLogger:
-                        def debug(self, msg): pass
-                        def warning(self, msg): pass
-                        def error(self, msg): pass
-                        
-                    ydl_opts = {'extract_flat': True, 'quiet': True, 'logger': DummyLogger()}
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        return ydl.extract_info(search, download=False)
-                        
-                try:
-                    info = await asyncio.to_thread(extract_flat)
-                    entries = info.get('entries', [])
-                    if not entries:
-                        raise ValueError("No entries found in playlist.")
-                        
-                    urls = [entry['url'] for entry in entries if 'url' in entry]
-                    playlist_name = info.get('title', 'Unknown Playlist')
-                except Exception as e:
-                    await tmp_msg.delete()
-                    await ctx.send(embed=self.create_embed("? Extraction Failed", f"Failed to extract playlist: {e}", discord.Color.red()))
-                    return
-                
-                await tmp_msg.delete()
-                
-                initial_chunk = urls[:50]
-                remaining_urls = urls[50:]
-                
-                added_count = 0
-                for url in initial_chunk:
-                    try:
-                        tracks = await wavelink.Playable.search(url)
-                        if tracks:
-                            track = tracks[0] if not isinstance(tracks, wavelink.Playlist) else list(tracks)[0]
-                            if not player.playing:
-                                await player.set_volume(30)
-                                await player.play(track)
-                            else:
-                                player.queue.put(track)
-                            added_count += 1
-                    except Exception:
-                        pass
-                
-                if remaining_urls:
-                    await ctx.send(embed=self.create_embed("? Partial Playlist Loaded", f"Added the first {added_count} tracks from **{playlist_name}**.\nLoading the remaining {len(remaining_urls)} tracks in the background...", discord.Color.green()))
-                    
-                    async def background_loader():
-                        chunks = [remaining_urls[i:i + 50] for i in range(0, len(remaining_urls), 50)]
-                        for chunk in chunks:
-                            await asyncio.sleep(5)
-                            for url in chunk:
-                                try:
-                                    tracks = await wavelink.Playable.search(url)
-                                    if tracks:
-                                        track = tracks[0] if not isinstance(tracks, wavelink.Playlist) else list(tracks)[0]
-                                        player.queue.put(track)
-                                except Exception:
-                                    pass
-                                    
-                    asyncio.create_task(background_loader())
-                else:
-                    await ctx.send(embed=self.create_embed("? Playlist Loaded", f"Added {added_count} tracks from **{playlist_name}**.", discord.Color.green()))
-                    
-                return
 
             max_attempts = 3
             for attempt in range(max_attempts):
@@ -1258,9 +1169,7 @@ class Music(commands.Cog):
                 try:
                     while True:
                         await asyncio.sleep(5)
-                        if not player or not getattr(player, "playing", False):
-                            break
-                        if player.current != track:
+                        if not player or player.current != track:
                             break
                             
                         updated_embed = self.create_player_embed(player, track)
@@ -1326,7 +1235,6 @@ class Music(commands.Cog):
             
             if current_track:
                 await player.play(current_track, start=current_position)
-                self.bot.loop.create_task(self.resend_ui(player, current_track))
                 
             await ctx.send(embed=self.create_embed("🔄 Node Switched", f"Successfully migrated player from `{old_node.identifier}` to `{new_node.identifier}`.", discord.Color.green()))
         except Exception as e:
