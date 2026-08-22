@@ -833,12 +833,15 @@ class Music(commands.Cog):
                             self.bot.loop.create_task(lazy_load_spotify())
                             return # Exit command successfully
                         except Exception as e:
+                            import traceback
+                            tb = traceback.format_exc()
                             try:
                                 await tmp_msg.delete()
                             except:
                                 pass
+                            return await ctx.send(embed=self.create_embed("❌ Spotify Extraction Failed", f"yt-dlp failed to parse the playlist:\n```py\n{str(e)}\n```", discord.Color.red()))
                             
-                    if not tracks:
+                    if not tracks and "spotify.com" not in search:
                         tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud)
                         
                     if not tracks:
