@@ -289,7 +289,10 @@ class Music(commands.Cog):
 
     async def start_nodes(self):
         self.node_configs = [
-            # Primary Node (Requested by User)
+            # Primary Node (Dedicated Server)
+            {"uri": "http://performance.heavencloud.online:4005", "password": "youshallnotpass", "identifier": "Heaven Cloud VIP", "retries": 3},
+            
+            # Secondary Node (Requested by User)
             {"uri": "https://lava-v4.millohost.my.id:443", "password": "https://discord.gg/mjS5J2K3ep", "identifier": "MilloHost (HTTPS)", "retries": 3},
             
             # Local Node (useful when testing on your laptop or running your own Lavalink server)
