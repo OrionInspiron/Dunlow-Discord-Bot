@@ -782,7 +782,14 @@ class Music(commands.Cog):
             max_attempts = 3
             for attempt in range(max_attempts):
                 try:
-                    tracks = await wavelink.Playable.search(search)
+                    try:
+                        tracks = await wavelink.Playable.search(search)
+                    except Exception as yt_e:
+                        # If YouTube throws a Rate Limit or Load exception, fallback to SoundCloud
+                        if "LavalinkLoadException" in type(yt_e).__name__ or "429" in str(yt_e) or "500" in str(yt_e):
+                            tracks = None
+                        else:
+                            raise yt_e
                     
                     if not tracks:
                         tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud)
