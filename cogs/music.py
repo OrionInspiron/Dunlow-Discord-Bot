@@ -783,7 +783,7 @@ class Music(commands.Cog):
             for attempt in range(max_attempts):
                 try:
                     try:
-                        tracks = await wavelink.Playable.search(search)
+                        tracks = await wavelink.Playable.search(search, node=player.node)
                     except Exception as yt_e:
                         # If YouTube throws a Rate Limit or Load exception, fallback to SoundCloud
                         if "LavalinkLoadException" in type(yt_e).__name__ or "429" in str(yt_e) or "500" in str(yt_e):
@@ -817,7 +817,7 @@ class Music(commands.Cog):
                                     query = f"{title} {artist}".strip()
                                     if query:
                                         try:
-                                            sc_tracks = await wavelink.Playable.search(query, source=wavelink.TrackSource.SoundCloud)
+                                            sc_tracks = await wavelink.Playable.search(query, source=wavelink.TrackSource.SoundCloud, node=player.node)
                                             if sc_tracks:
                                                 track = sc_tracks[0] if not isinstance(sc_tracks, wavelink.Playlist) else list(sc_tracks)[0]
                                                 if not player.playing:
@@ -842,7 +842,7 @@ class Music(commands.Cog):
                             return await ctx.send(embed=self.create_embed("❌ Spotify Extraction Failed", f"yt-dlp failed to parse the playlist:\n```py\n{str(e)}\n```", discord.Color.red()))
                             
                     if not tracks and "spotify.com" not in search:
-                        tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud)
+                        tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud, node=player.node)
                         
                     if not tracks:
                         return await ctx.send(embed=self.create_embed("❌ No Tracks Found", f"Could not find any tracks for: `{search}`", discord.Color.red()))
