@@ -833,15 +833,7 @@ class Music(commands.Cog):
                     is_rate_limit = "429" in error_msg or "mimetype: text/plain" in error_msg or "502" in error_msg or "500" in error_msg
                     
                     if is_rate_limit and attempt < max_attempts - 1:
-                        bad_node = getattr(player, "node", None)
-                        if bad_node:
-                            print(f"Rate limit/Error hit on {bad_node.uri}. Closing node to force failover...")
-                            try:
-                                await bad_node.close()
-                            except:
-                                pass
-                        
-                        await ctx.send(embed=self.create_embed("🔄 Automatic Failover", "The primary server was overloaded. Instantly switching to a backup server and retrying...", discord.Color.gold()))
+                        await ctx.send(embed=self.create_embed("🔄 Retrying...", "The server rejected the request. Retrying...", discord.Color.gold()))
                         await asyncio.sleep(2)
                         continue
                     else:
