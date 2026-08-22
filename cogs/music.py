@@ -588,8 +588,14 @@ class Music(commands.Cog):
         
         fail_count = getattr(player, "fail_count", 0)
         
+        is_rate_limit = False
+        if hasattr(payload, "exception"):
+            error_str = str(payload.exception).lower()
+            if "429" in error_str or "rate limit" in error_str or "lavalinkloadexception" in error_str:
+                is_rate_limit = True
+        
         migrated = False
-        if fail_count < 10 and hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
+        if is_rate_limit and fail_count < 10 and hasattr(wavelink.Pool, "nodes") and isinstance(wavelink.Pool.nodes, dict):
             available_nodes = [n for n in wavelink.Pool.nodes.values() if n.identifier != player.node.identifier]
             if available_nodes:
                 import random
@@ -611,13 +617,14 @@ class Music(commands.Cog):
             player.fail_count = 0 # Reset for the next track
             if player.queue.is_empty:
                 if hasattr(player, "text_channel") and player.text_channel:
-                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** (All nodes blocked). Removed from queue.", discord.Color.red()))
-                await player.skip(force=True)
+                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}** (Error: 404 Not Found or Unplayable). Removed from queue.", discord.Color.red()))
+                try:
+                    await player.skip(force=True)
+                except Exception:
+                    pass
             else:
-                player.queue.put(track)
                 if hasattr(player, "text_channel") and player.text_channel:
-                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. Moved to the end of the playlist.", discord.Color.red()))
-                
+                    await player.text_channel.send(embed=self.create_embed("⚠️ Track Error", f"Failed to play **{track.title}**. Skipping to the next track...", discord.Color.red()))
                 try:
                     await player.skip(force=True)
                 except Exception as e:
