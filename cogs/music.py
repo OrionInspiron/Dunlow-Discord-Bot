@@ -791,6 +791,53 @@ class Music(commands.Cog):
                         else:
                             raise yt_e
                     
+                    if not tracks and "spotify.com/playlist" in search:
+                        tmp_msg = await ctx.send(embed=self.create_embed("🎵 Spotify Fallback", "Server lacks Spotify support. Extracting tracks and playing via SoundCloud...", discord.Color.gold()))
+                        
+                        def extract_spotify():
+                            ydl_opts = {'extract_flat': True, 'quiet': True}
+                            import yt_dlp
+                            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                                return ydl.extract_info(search, download=False)
+                                
+                        try:
+                            info = await asyncio.to_thread(extract_spotify)
+                            entries = info.get('entries', [])
+                            if not entries:
+                                raise ValueError("No entries found")
+                            
+                            playlist_name = info.get('title', 'Spotify Playlist')
+                            await tmp_msg.delete()
+                            await ctx.send(embed=self.create_embed("✅ Playlist Loading", f"Found **{playlist_name}** ({len(entries)} tracks). Adding to queue slowly via SoundCloud to prevent rate limits...", discord.Color.green()))
+                            
+                            async def lazy_load_spotify():
+                                for entry in entries:
+                                    title = entry.get('title', '')
+                                    artist = entry.get('uploader', '') or entry.get('channel', '')
+                                    query = f"{title} {artist}".strip()
+                                    if query:
+                                        try:
+                                            sc_tracks = await wavelink.Playable.search(query, source=wavelink.TrackSource.SoundCloud)
+                                            if sc_tracks:
+                                                track = sc_tracks[0] if not isinstance(sc_tracks, wavelink.Playlist) else list(sc_tracks)[0]
+                                                if not player.playing:
+                                                    await player.set_volume(30)
+                                                    await player.play(track)
+                                                    self.bot.loop.create_task(self.resend_ui(player, track))
+                                                else:
+                                                    player.queue.put(track)
+                                        except Exception:
+                                            pass
+                                        await asyncio.sleep(1.5) # Prevent 429 Rate Limits on SoundCloud
+                                        
+                            self.bot.loop.create_task(lazy_load_spotify())
+                            return # Exit command successfully
+                        except Exception as e:
+                            try:
+                                await tmp_msg.delete()
+                            except:
+                                pass
+                            
                     if not tracks:
                         tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud)
                         
