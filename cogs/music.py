@@ -791,24 +791,27 @@ class Music(commands.Cog):
                         else:
                             raise yt_e
                     
-                    if not tracks and "spotify.com/playlist" in search:
-                        tmp_msg = await ctx.send(embed=self.create_embed("🎵 Spotify Fallback", "Server lacks Spotify support. Extracting tracks and playing via SoundCloud...", discord.Color.gold()))
+                    if not tracks and ("spotify.com" in search or "youtube.com" in search or "youtu.be" in search):
+                        tmp_msg = await ctx.send(embed=self.create_embed("🎵 Link Fallback", "Server blocked from this site. Extracting tracks and playing via SoundCloud...", discord.Color.gold()))
                         
-                        def extract_spotify():
+                        def extract_url():
                             ydl_opts = {'extract_flat': True, 'quiet': True}
                             import yt_dlp
                             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                                 return ydl.extract_info(search, download=False)
                                 
                         try:
-                            info = await asyncio.to_thread(extract_spotify)
+                            info = await asyncio.to_thread(extract_url)
                             entries = info.get('entries', [])
                             if not entries:
-                                raise ValueError("No entries found")
+                                if info.get('title'):
+                                    entries = [info]
+                                else:
+                                    raise ValueError("No entries found")
                             
-                            playlist_name = info.get('title', 'Spotify Playlist')
+                            playlist_name = info.get('title', 'Playlist / Track')
                             await tmp_msg.delete()
-                            await ctx.send(embed=self.create_embed("✅ Playlist Loading", f"Found **{playlist_name}** ({len(entries)} tracks). Adding to queue slowly via SoundCloud to prevent rate limits...", discord.Color.green()))
+                            await ctx.send(embed=self.create_embed("✅ Loading...", f"Found **{playlist_name}** ({len(entries)} items). Adding to queue slowly via SoundCloud to prevent rate limits...", discord.Color.green()))
                             
                             async def lazy_load_spotify():
                                 for entry in entries:
@@ -839,9 +842,9 @@ class Music(commands.Cog):
                                 await tmp_msg.delete()
                             except:
                                 pass
-                            return await ctx.send(embed=self.create_embed("❌ Spotify Extraction Failed", f"yt-dlp failed to parse the playlist:\n```py\n{str(e)}\n```", discord.Color.red()))
+                            return await ctx.send(embed=self.create_embed("❌ Extraction Failed", f"yt-dlp failed to parse the link:\n```py\n{str(e)}\n```", discord.Color.red()))
                             
-                    if not tracks and "spotify.com" not in search:
+                    if not tracks and "spotify.com" not in search and "youtube.com" not in search and "youtu.be" not in search:
                         tracks = await wavelink.Playable.search(search, source=wavelink.TrackSource.SoundCloud, node=player.node)
                         
                     if not tracks:
