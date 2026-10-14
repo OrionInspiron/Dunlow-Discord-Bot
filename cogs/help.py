@@ -36,7 +36,8 @@ class HelpCog(commands.Cog):
     @commands.command(name="help", help="Shows the soothing lofi radio command guide.")
     async def help_command(self, ctx):
         friendly_descriptions = {
-            "radio": "Summons the bot into your voice channel and begins streaming continuous soothing non-lyrical melodies directly from lofi.radio.",
+            "radio": "Summons the bot into your voice channel and begins streaming continuous 24/7 melodies (lofi, gaming, cinema, all).",
+            "station": "Switches the active radio station (lofi, gaming, cinema, all) or lists available stations.",
             "shuffle": "Randomizes the remaining upcoming melodies in the radio queue.",
             "next": "Skips immediately to the next soothing melody.",
             "previous": "Plays the previous soothing melody from recent playback history.",

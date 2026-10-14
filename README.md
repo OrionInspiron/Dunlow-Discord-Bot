@@ -13,12 +13,13 @@ Built with native Discord voice streaming, Discord's newest **DAVE voice encrypt
 
 ## ✨ Key Features
 
-- ☕ **100% Non-Lyrical & Chill**: Dreamy beats and melodic instruments designed for studying, coding, relaxing, and sleeping. Zero ads, zero lyrics, zero interruptions.
+- 📻 **Multi-Station Radio (308+ Tracks)**: Switch seamlessly between **☕ Lofi Beats** (lofi.radio), **🎮 Iconic Gaming Themes** (Minecraft, Zelda, Undertale, Mario, Hollow Knight, Chrono Trigger, Pokemon, Halo), **🎬 Cinema & Anime Themes** (Studio Ghibli, Interstellar, Star Wars), and **🔀 All-in-One Shuffle**!
+- ☕ **100% Non-Lyrical & Chill**: Dreamy beats and melodic instruments designed for studying, coding, gaming, relaxing, and sleeping. Zero ads, zero lyrics, zero interruptions.
 - 🎛️ **Single Persistent Session Message**: Unlike typical music bots that spam a new message every 2–3 minutes for every song, this bot edits a **single interactive embed** in real-time for the entire session.
-- 🔘 **Interactive UI Controller**: Built-in buttons for **Play/Pause**, **Next Melody**, **Shuffle**, **Vol -**, **Vol +**, and **Stop & Leave**.
+- 🔘 **Interactive UI Controller & Station Switcher**: Built-in dropdown to switch stations on the fly, plus control buttons for **Play/Pause**, **Next Melody**, **Shuffle**, **Vol -**, **Vol +**, and **Stop & Leave**.
 - 🔒 **DAVE End-to-End Encryption**: Fully compatible with Discord's mandatory voice encryption protocol using `davey` and `PyNaCl`.
 - ⚡ **No Lavalink Required**: Direct FFmpeg audio stream decoding without needing heavy Java servers or unstable external nodes.
-- 🕒 **24/7 Voice Persistence**: Auto-rejoins if disconnected and keeps the radio playing around the clock.
+- 🕒 **24/7 Voice Persistence & Self-Healing Watchdog**: Auto-rejoins if disconnected and features an automatic background watchdog to revive stalled playback.
 - 🌐 **Built-in Uptime Web Server**: Runs a lightweight HTTP server (`keep_alive.py`) on port 8080 to support 24/7 pingers (UptimeRobot, Cron-job, etc.).
 
 ---
@@ -62,15 +63,16 @@ All commands use the default prefix `f#`:
 
 | Command | Aliases | Description |
 | :--- | :--- | :--- |
-| `f#radio` | `join`, `start`, `play`, `p` | Joins your voice channel and starts the 24/7 soothing radio stream. |
-| `f#next` | `skip`, `s` | Skips to the next soothing melody in the queue. |
+| `f#radio [station]` | `join`, `start`, `play`, `p` | Joins your voice channel and starts 24/7 radio (lofi, gaming, cinema, all). |
+| `f#station [name]` | `stations`, `mode` | Switches radio station (lofi, gaming, cinema, all) or lists stations. |
+| `f#next` | `skip`, `s` | Skips to the next melody in the queue. |
 | `f#previous` | `prev` | Replays the previously played melody from history. |
-| `f#shuffle` | — | Randomizes all upcoming melodies in the queue. |
+| `f#shuffle` | — | Randomizes all upcoming melodies in the active station queue. |
 | `f#pause` | — | Pauses the radio stream. |
 | `f#resume` | — | Resumes playing the paused stream. |
 | `f#volume <1-100>`| `vol`, `v` | Sets the radio volume percentage (e.g. `f#volume 50`). |
 | `f#nowplaying` | `np` | Refreshes and brings the active session player card into view. |
-| `f#queue` | `q` | Displays upcoming soothing melodies with paginated navigation. |
+| `f#queue` | `q` | Displays upcoming melodies with paginated navigation. |
 | `f#247` | — | Toggles 24/7 persistence mode (auto-reconnect on disconnect). |
 | `f#stop` | `leave`, `dc`, `disconnect` | Stops the radio, ends the session, and leaves the voice channel. |
 | `f#help` | — | Displays an interactive, paginated command guide. |
