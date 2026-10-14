@@ -1,6 +1,16 @@
+# Environment variables
 .env
+
+# Virtual environments
 .venv/
+venv/
+env/
+
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
 logs/
-Lavalink.jar

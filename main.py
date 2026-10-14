@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 # pyrefly: ignore [missing-import]
 import discord
@@ -7,13 +8,17 @@ from discord.ext import commands
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
+from keep_alive import start_server
+
 load_dotenv()
+
 
 class Bot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix="f#", intents=intents, help_command=None)
+        self.should_restart = False
 
     async def close(self):
         # Gracefully disconnect any active voice clients
@@ -32,55 +37,53 @@ class Bot(commands.Bot):
   / _ \__ _____  ___/ /__ _    __  / _ )___  / /_
  / // / // / _ \/ _  / _ \ |/|/ / / _  / _ \/ __/
 /____/\_,_/_//_/\_,_/\___/__,__/ /____/\___/\__/ 
-                                                 
         """ + "\033[0m")
         print("\033[90m====================================================\033[0m")
         print("\033[33m[SYS]\033[0m Booting up modules...")
         
-        # Load cogs
-        import sys
+        # Load cogs dynamically
         for filename in os.listdir("./cogs"):
             if filename.endswith(".py"):
                 cog_name = f"cogs.{filename[:-3]}"
-                # Force reload by removing from sys.modules if it exists
                 if cog_name in sys.modules:
                     del sys.modules[cog_name]
                 await self.load_extension(cog_name)
                 print(f"\033[32m  [+]\033[0m Loaded extension: \033[36m{filename}\033[0m")
-        # Sync slash commands removed as requested
         print("\033[90m====================================================\033[0m")
 
     async def on_ready(self):
         print(f"\033[35m[BOT]\033[0m Logged in securely as \033[1m{self.user}\033[0m (ID: {self.user.id})")
         print(f"\033[35m[BOT]\033[0m Status: \033[32mONLINE\033[0m | Prefix: \033[36mf#\033[0m")
         print("\033[90m====================================================\033[0m")
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='Soothing Melodies 📻 | f#help'))
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name="Soothing Melodies 📻 | f#help"
+            )
+        )
 
-from keep_alive import start_server
 
 async def main():
-    bot = Bot()
     discord_token = os.getenv("DISCORD_TOKEN")
-    
     if not discord_token or discord_token == "your_discord_bot_token_here":
         print("Please provide a valid DISCORD_TOKEN in the .env file.")
         return
 
-    # Start the dummy web server
+    # Start healthcheck web server for 24/7 uptime monitoring
     start_server()
 
     while True:
         bot = Bot()
-        bot.should_restart = False
         async with bot:
             await bot.start(discord_token)
             
-        if getattr(bot, "should_restart", False):
+        if bot.should_restart:
             print("[SYS] Bot is restarting internally... Please wait.")
             await asyncio.sleep(2)
             continue
         else:
             break
+
 
 if __name__ == "__main__":
     asyncio.run(main())
