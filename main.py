@@ -16,18 +16,12 @@ class Bot(commands.Bot):
         super().__init__(command_prefix="f#", intents=intents, help_command=None)
 
     async def close(self):
-        # Gracefully shut down wavelink nodes to prevent "Unclosed client session" warnings
-        try:
-            import wavelink
-            if hasattr(wavelink.Pool, "nodes"):
-                # wavelink.Pool.close() might not exist in all v3/v4 versions, so we close nodes manually
-                for node in list(wavelink.Pool.nodes.values()):
-                    try:
-                        await asyncio.wait_for(node.close(), timeout=2.0)
-                    except:
-                        pass
-        except Exception:
-            pass
+        # Gracefully disconnect any active voice clients
+        for vc in list(self.voice_clients):
+            try:
+                await vc.disconnect(force=True)
+            except Exception:
+                pass
         await super().close()
 
     async def setup_hook(self):
@@ -60,7 +54,7 @@ class Bot(commands.Bot):
         print(f"\033[35m[BOT]\033[0m Logged in securely as \033[1m{self.user}\033[0m (ID: {self.user.id})")
         print(f"\033[35m[BOT]\033[0m Status: \033[32mONLINE\033[0m | Prefix: \033[36mf#\033[0m")
         print("\033[90m====================================================\033[0m")
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='f#help'))
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='Soothing Melodies 📻 | f#help'))
 
 from keep_alive import start_server
 

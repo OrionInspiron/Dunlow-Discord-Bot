@@ -28,86 +28,63 @@ class HelpPaginationView(discord.ui.View):
 
 
 class HelpCog(commands.Cog):
+    """Help documentation for the 24/7 Soothing Lofi Radio Bot."""
+
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help", help="Shows this help message.")
+    @commands.command(name="help", help="Shows the soothing lofi radio command guide.")
     async def help_command(self, ctx):
         friendly_descriptions = {
-            "247": "Keeps the bot in the voice channel 24/7, even when no music is playing.",
-            "join": "Summons the bot into your current voice channel.",
-            "play": "Plays a song! Just type a song name or paste a link.",
-            "nowplaying": "Shows the song that is currently playing.",
-            "skip": "Skips the current song and plays the next one.",
-            "pause": "Pauses the music.",
-            "resume": "Resumes playing the paused music.",
-            "shuffle": "Mixes up all the songs in your queue randomly.",
-            "loop": "Changes the loop mode (Loop off -> Loop song -> Loop entire queue).",
-            "clear": "Removes all songs from the queue.",
-            "remove": "Removes a specific song from the queue using its number.",
-            "seek": "Jumps to a specific time in the song (e.g., 60 for 1 minute).",
-            "replay": "Restarts the current song from the very beginning.",
-            "forward": "Jumps forward in the song by the amount of seconds you specify.",
-            "rewind": "Jumps backward in the song by the amount of seconds you specify.",
-            "stop": "Stops the music entirely and clears everything out.",
-            "queue": "Shows you the list of upcoming songs.",
-            "skipto": "Skips directly to a specific song number or name in the queue.",
-            "volume": "Turns the music volume up or down (1-100).",
-            "lyrics": "Searches for the lyrics of the currently playing song.",
-            "playlist": "Commands to manage your personal playlists.",
-            "save": "Saves everything in the queue to a personal playlist you can play later.",
-            "list": "Shows you a list of all the personal playlists you have saved.",
-            "filter": "Fun audio effects you can apply to the music.",
-            "bassboost": "Turns up the bass! You can set the level from 0 to 100.",
-            "nightcore": "Speeds up the song and raises the pitch for a Nightcore vibe.",
-            "vaporwave": "Slows down the song and lowers the pitch for a chill Vaporwave aesthetic.",
-            "karaoke": "Applies a karaoke filter and retrieves the lyrics.",
-            "8d": "Spins the audio around your head for an immersive 8D effect. Put on headphones!",
-            "reset": "Turns off all audio filters and returns the song to normal.",
-            "help": "Shows this helpful guide to all the bot's commands!",
-            "history": "Shows the last 10 tracks played in this server.",
-            "top": "Shows the top 10 most played tracks in this server.",
-            "playlyrics": "Searches for a song by its lyrics and plays it.",
-            "speed": "Changes the playback speed (0.5x to 2.0x)."
+            "radio": "Summons the bot into your voice channel and begins streaming continuous soothing non-lyrical melodies directly from lofi.radio.",
+            "shuffle": "Randomizes the remaining upcoming melodies in the radio queue.",
+            "next": "Skips immediately to the next soothing melody.",
+            "previous": "Plays the previous soothing melody from recent playback history.",
+            "pause": "Pauses the soothing radio stream.",
+            "resume": "Resumes playing the paused radio stream.",
+            "nowplaying": "Shows the current melody card with interactive control buttons.",
+            "queue": "Displays the rotating lineup of upcoming soothing melodies.",
+            "volume": "Adjusts the radio volume (1-100%).",
+            "247": "Toggles 24/7 mode (keeps the bot in the voice channel continuously).",
+            "stop": "Stops the radio and disconnects from your voice channel.",
+            "restart": "Restarts the bot internally (Admins/Owners only).",
+            "help": "Displays this helpful command guide."
         }
 
         commands_list = []
         for command in self.bot.walk_commands():
             if not command.hidden:
                 commands_list.append(command)
-                
+
         commands_list.sort(key=lambda x: x.qualified_name)
-        
+
         per_page = 6
         chunks = [commands_list[i:i + per_page] for i in range(0, len(commands_list), per_page)]
-        
+
         embeds = []
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(
-                title=f"📚 Bot Commands (Page {i+1}/{len(chunks)})",
-                description="Here is a list of all available commands in easy-to-understand language:",
-                color=discord.Color.blurple()
+                title=f"📻 Lofi Radio Bot • Commands (Page {i+1}/{len(chunks)})",
+                description="24/7 non-lyrical chill beats to study, relax, and sleep powered directly by **[lofi.radio](https://lofi.radio/)**.\nHere are the available commands:",
+                color=discord.Color.from_rgb(0, 209, 178)
             )
-            
+
             for cmd in chunk:
                 aliases = f" (Aliases: {', '.join(cmd.aliases)})" if cmd.aliases else ""
-                
-                # Format usage with parent command if it exists
                 parent = f"{cmd.parent.name} " if cmd.parent else ""
                 usage = f"`f#{parent}{cmd.name} {cmd.signature}`".strip()
-                
-                # Check for friendly description
+
                 desc = friendly_descriptions.get(cmd.name, cmd.help or "No description provided.")
-                
+
                 embed.add_field(
                     name=f"🔹 {parent}{cmd.name}{aliases}",
                     value=f"**Description:** {desc}\n**Usage:** {usage}",
                     inline=False
                 )
-            
-            embed.set_footer(text="Use the buttons below to navigate pages.")
+
+            embed.set_footer(text="Use the buttons below to flip through pages • Prefix: f#")
             embeds.append(embed)
-            
+
         if len(embeds) == 0:
             await ctx.send("No commands found.")
         elif len(embeds) == 1:
