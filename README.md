@@ -33,7 +33,7 @@ Built with native Discord voice streaming, Discord's newest **DAVE voice encrypt
                            |
                            v Direct HTTP Audio Stream
 +-------------------------------------------------------+
-|  Femboys / Dunlow Discord Bot                         |
+|  Dunlow Discord Bot                                   |
 |                                                       |
 |  1. FFmpeg PCMAudio Streamer                          |
 |  2. PCMVolumeTransformer (Dynamic 1-100% Volume)      |
@@ -117,8 +117,8 @@ To run this bot, you need to create an application and bot token in the Discord 
 ### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/OrionInspiron/femboys-bot.git
-   cd femboys-bot
+   git clone https://github.com/OrionInspiron/Dunlow-Discord-Bot.git
+   cd Dunlow-Discord-Bot
    ```
 
 2. Create and activate a virtual environment (optional but recommended):
@@ -166,7 +166,7 @@ To run this bot, you need to create an application and bot token in the Discord 
 #### To deploy the web project to Vercel:
 1. Fork or push this repository to your GitHub account.
 2. Log into **[Vercel](https://vercel.com/)** and click **Add New...** -> **Project**.
-3. Import your `femboys-bot` (or `Dunlow-Discord-Bot`) repository.
+3. Import your `Dunlow-Discord-Bot` repository.
 4. In the **Environment Variables** section:
    - Add `DISCORD_TOKEN` with your bot token value.
 5. In your project, create a `vercel.json` if configuring serverless routes:
@@ -212,7 +212,7 @@ For a continuous, uninterrupted 24/7 radio stream in Discord voice channels, use
 ## 🛠️ Project Structure
 
 ```text
-femboys-bot/
+Dunlow-Discord-Bot/
 ├── .env                  # Private bot secrets (git-ignored)
 ├── .env.example          # Environment variables template
 ├── .gitignore            # Git exclusions
