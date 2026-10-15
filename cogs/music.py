@@ -1,5 +1,6 @@
 import os
 import asyncio
+import aiohttp
 import random
 import time
 import urllib.parse
@@ -203,8 +204,8 @@ STATIONS = {
 }
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5',
+    'options': '-vn -loglevel warning'
 }
 
 
@@ -353,16 +354,19 @@ class RadioPlayerUI(discord.ui.View):
     @discord.ui.button(label="⏹️ Stop & Leave", style=discord.ButtonStyle.danger, custom_id="lofi_stop", row=2)
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc: Optional[discord.VoiceClient] = interaction.guild.voice_client # pyrefly: ignore
-        if not vc:
-            return await interaction.response.send_message("Radio is not playing.", ephemeral=True)
-
         guild_id = interaction.guild.id
         self.music_cog.intentional_leaves.add(guild_id)
+        self.music_cog.stay_connected[guild_id] = False
         self.music_cog.active_voice_channels.pop(guild_id, None)
-        if guild_id:
+        if guild_id in self.music_cog.queues:
             self.music_cog.queues[guild_id] = []
-        vc.stop()
-        await vc.disconnect()
+        if vc:
+            if vc.is_playing() or vc.is_paused():
+                vc.stop()
+            try:
+                await vc.disconnect(force=True)
+            except Exception:
+                pass
 
         embed = discord.Embed(
             title="📻 24/7 Radio • Session Ended",
@@ -414,7 +418,12 @@ class Music(commands.Cog):
         self.stay_connected: Dict[int, bool] = {}
         self.intentional_leaves: Set[int] = set()
         self.active_voice_channels: Dict[int, int] = {}
-        self.reconnecting_guilds: Set[int] = set()
+        self.voice_locks: Dict[int, asyncio.Lock] = {}
+
+    def get_voice_lock(self, guild_id: int) -> asyncio.Lock:
+        if guild_id not in self.voice_locks:
+            self.voice_locks[guild_id] = asyncio.Lock()
+        return self.voice_locks[guild_id]
 
     async def cog_load(self):
         self.radio_watchdog.start()
@@ -558,6 +567,61 @@ class Music(commands.Cog):
         )
         return embed
 
+    async def safe_reconnect_vc(self, guild: discord.Guild, channel: discord.VoiceChannel) -> Optional[discord.VoiceClient]:
+        """Safely connects or reconnects to a voice channel with lock guarding and cooldown."""
+        guild_id = guild.id
+        lock = self.get_voice_lock(guild_id)
+        if lock.locked():
+            return None
+
+        async with lock:
+            vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
+            # 1. If already connected to target channel, return it
+            if vc and vc.is_connected():
+                if vc.channel.id != channel.id:
+                    try:
+                        await vc.move_to(channel)
+                    except Exception as e:
+                        print(f"[RADIO] Failed to move to channel {channel.name}: {type(e).__name__} {e}")
+                return vc
+
+            # 2. If a stale/disconnected voice client exists, tear it down cleanly
+            if vc:
+                try:
+                    await vc.disconnect(force=True)
+                except Exception:
+                    pass
+                # Allow Discord gateway to process the voice state cleanup
+                await asyncio.sleep(1.0)
+
+            # 3. Check bot voice permissions in target channel
+            perms = channel.permissions_for(guild.me)
+            if not perms.connect or not perms.speak:
+                print(f"[RADIO] Missing permissions (connect/speak) in {channel.name} ({guild.name})")
+                return None
+
+            # 4. Initiate fresh connection
+            try:
+                new_vc = await channel.connect(timeout=15.0, reconnect=True)
+                self.active_voice_channels[guild_id] = channel.id
+                return new_vc
+            except discord.ClientException as e:
+                current_vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
+                if current_vc and current_vc.is_connected():
+                    return current_vc
+                print(f"[RADIO] Voice ClientException: {e}")
+                return None
+            except Exception as e:
+                print(f"[RADIO] Failed to connect to {channel.name}: {type(e).__name__} {e}")
+                return None
+
+    async def safe_update_player_message(self, guild_id: int, track: Any):
+        """Wrapper for update_player_message to ensure no task exceptions are unhandled."""
+        try:
+            await self.update_player_message(guild_id, track)
+        except Exception as e:
+            print(f"[RADIO] Player message update notice: {type(e).__name__} {e}")
+
     async def update_player_message(self, guild_id: int, track: Any):
         """Updates the persistent single session message for this guild."""
         channel = self.text_channels.get(guild_id)
@@ -584,15 +648,18 @@ class Music(commands.Cog):
                 return
             except discord.NotFound:
                 self.player_messages.pop(guild_id, None)
-            except discord.HTTPException as e:
-                print(f"[RADIO] Failed to edit existing player message: {e}")
+            except (discord.HTTPException, aiohttp.ClientError, asyncio.TimeoutError) as e:
+                print(f"[RADIO] Notice while editing player message ({type(e).__name__}): {e}")
+                self.player_messages.pop(guild_id, None)
+            except Exception as e:
+                print(f"[RADIO] Unexpected notice while editing player message ({type(e).__name__}): {e}")
                 self.player_messages.pop(guild_id, None)
 
         try:
             msg = await channel.send(embed=embed, view=view)
             self.player_messages[guild_id] = msg
         except Exception as e:
-            print(f"[RADIO] Failed to send Player UI: {e}")
+            print(f"[RADIO] Failed to send Player UI: {type(e).__name__} {e}")
 
     async def cleanup_session(self, guild_id: int):
         """Edits the single session message to ended state when the bot leaves or stops."""
@@ -617,9 +684,6 @@ class Music(commands.Cog):
 
         vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
         if not vc or not vc.is_connected():
-            # If 24/7 mode is on and not intentionally left, retry in 3 seconds to recover from momentary reconnects
-            if self.stay_connected.get(guild_id, True) and guild_id not in self.intentional_leaves:
-                self.bot.loop.call_later(3.0, self.play_next_song, guild_id)
             return
 
         if vc.is_playing() or vc.is_paused():
@@ -643,23 +707,25 @@ class Music(commands.Cog):
 
             def after_play(error):
                 if error:
-                    print(f"[RADIO] Playback error for {self.get_song_title(next_track)}: {error}")
-                # Slight 0.5s delay avoids busy looping on immediate stream or decode failures
-                self.bot.loop.call_later(0.5, self.play_next_song, guild_id)
+                    print(f"[RADIO] Playback finished with notice for {self.get_song_title(next_track)}: {error}")
+                if not self.bot.is_closed() and self.bot.loop.is_running():
+                    self.bot.loop.call_later(0.5, self.play_next_song, guild_id)
 
             vc.play(vol_source, after=after_play)
             print(f"\033[32m[RADIO] 🎵 Now Playing:\033[0m {self.get_song_title(next_track)} ({self.get_song_source(next_track)}) in {guild.name}")
 
-            # Update the single session message
-            self.bot.loop.create_task(self.update_player_message(guild_id, next_track))
+            # Update the single session message safely
+            self.bot.loop.create_task(self.safe_update_player_message(guild_id, next_track))
         except discord.ClientException as e:
             if "Already playing" in str(e):
                 return
             print(f"[RADIO] ClientException while playing {self.get_song_title(next_track)}: {e}")
-            self.bot.loop.call_later(1.0, self.play_next_song, guild_id)
+            if not self.bot.is_closed() and self.bot.loop.is_running():
+                self.bot.loop.call_later(1.0, self.play_next_song, guild_id)
         except Exception as e:
             print(f"[RADIO] Failed to play {self.get_song_title(next_track)}: {e}")
-            self.bot.loop.call_later(1.0, self.play_next_song, guild_id)
+            if not self.bot.is_closed() and self.bot.loop.is_running():
+                self.bot.loop.call_later(1.0, self.play_next_song, guild_id)
 
     # ==================== VOICE STATE LISTENER & WATCHDOG ====================
 
@@ -697,50 +763,19 @@ class Music(commands.Cog):
                 await self.cleanup_session(guild_id)
                 return
 
-            # Debounce: prevent multiple concurrent rejoin routines for the same guild
-            if guild_id in self.reconnecting_guilds:
+            target_channel = before.channel
+            print(f"[RADIO] Disconnected from {target_channel.name}. Checking auto-rejoin in 3 seconds (24/7 mode)...")
+            await asyncio.sleep(3.0)
+
+            # If intentional leave happened during sleep, abort
+            if guild_id in self.intentional_leaves:
                 return
 
-            self.reconnecting_guilds.add(guild_id)
-            target_channel = before.channel
+            new_vc = await self.safe_reconnect_vc(guild, target_channel)
+            if new_vc and not new_vc.is_playing() and not new_vc.is_paused():
+                self.play_next_song(guild_id)
 
-            try:
-                print(f"[RADIO] Disconnected from {target_channel.name}. Checking auto-rejoin in 2 seconds (24/7 mode)...")
-                await asyncio.sleep(2)
-
-                # Check if discord.py already reconnected automatically in background
-                vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
-                if vc and vc.is_connected():
-                    print(f"[RADIO] Already connected to {vc.channel.name}. Resuming radio...")
-                    if not vc.is_playing() and not vc.is_paused():
-                        self.play_next_song(guild_id)
-                    return
-
-                # If a stale or broken voice_client exists, cleanly detach it before connecting
-                if vc:
-                    try:
-                        await vc.disconnect(force=True)
-                    except Exception:
-                        pass
-
-                # Connect cleanly
-                try:
-                    new_vc = await target_channel.connect(timeout=20.0, reconnect=True)
-                    self.active_voice_channels[guild_id] = target_channel.id
-                    if not new_vc.is_playing() and not new_vc.is_paused():
-                        self.play_next_song(guild_id)
-                except discord.ClientException:
-                    # 'Already connected' — verify existing client and start playback
-                    current_vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
-                    if current_vc and current_vc.is_connected():
-                        if not current_vc.is_playing() and not current_vc.is_paused():
-                            self.play_next_song(guild_id)
-                except Exception as e:
-                    print(f"[RADIO] Auto-rejoin failed: {e}")
-            finally:
-                self.reconnecting_guilds.discard(guild_id)
-
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=12)
     async def radio_watchdog(self):
         """Monitors all 24/7 radio sessions and self-heals any stalled audio or dropped connections."""
         for guild_id, is_247 in list(self.stay_connected.items()):
@@ -762,23 +797,13 @@ class Music(commands.Cog):
             # 2. Bot was supposed to stay 24/7, but disconnected from voice channel
             elif not vc or not vc.is_connected():
                 channel_id = self.active_voice_channels.get(guild_id)
-                if channel_id and guild_id not in self.reconnecting_guilds:
+                if channel_id:
                     channel = guild.get_channel(channel_id)
                     if isinstance(channel, discord.VoiceChannel):
                         print(f"[RADIO-WATCHDOG] Reconnecting 24/7 stream to {channel.name} in {guild.name}...")
-                        self.reconnecting_guilds.add(guild_id)
-                        try:
-                            if vc:
-                                try:
-                                    await vc.disconnect(force=True)
-                                except Exception:
-                                    pass
-                            new_vc = await channel.connect(timeout=20.0, reconnect=True)
+                        new_vc = await self.safe_reconnect_vc(guild, channel)
+                        if new_vc and not new_vc.is_playing() and not new_vc.is_paused():
                             self.play_next_song(guild_id)
-                        except Exception as e:
-                            print(f"[RADIO-WATCHDOG] Reconnect failed: {e}")
-                        finally:
-                            self.reconnecting_guilds.discard(guild_id)
 
     @radio_watchdog.before_loop
     async def before_watchdog(self):
@@ -814,18 +839,10 @@ class Music(commands.Cog):
         self.active_voice_channels[guild_id] = vc_target.id
         self.intentional_leaves.discard(guild_id)
 
-        vc: Optional[discord.VoiceClient] = ctx.guild.voice_client # pyrefly: ignore
-
-        if not vc or not vc.is_connected():
-            station_info = STATIONS.get(self.current_station[guild_id], STATIONS["lofi"])
-            msg = await ctx.send(embed=self.create_embed("📻 Connecting...", f"Connecting to {vc_target.mention} and tuning into **{station_info['name']}**...", discord.Color.blue()))
-            try:
-                vc = await vc_target.connect(timeout=20.0, reconnect=True)
-                self.player_messages[guild_id] = msg
-            except Exception as e:
-                return await msg.edit(embed=self.create_embed("❌ Connection Failed", f"Could not connect to {vc_target.mention}: {e}", discord.Color.red()))
-        elif vc.channel.id != vc_target.id:
-            await vc.move_to(vc_target)
+        station_info = STATIONS.get(self.current_station[guild_id], STATIONS["lofi"])
+        vc = await self.safe_reconnect_vc(ctx.guild, vc_target)
+        if not vc:
+            return await ctx.send(embed=self.create_embed("❌ Connection Failed", f"Could not connect to {vc_target.mention}. Please check my voice channel permissions!", discord.Color.red()), delete_after=10)
 
         # If not playing, start radio immediately
         if not vc.is_playing() and not vc.is_paused():
@@ -833,7 +850,7 @@ class Music(commands.Cog):
             self.play_next_song(guild_id)
         else:
             current = self.current_song.get(guild_id, {"title": "Melody"})
-            await self.update_player_message(guild_id, current)
+            await self.safe_update_player_message(guild_id, current)
 
         try:
             await ctx.message.delete()
@@ -1060,17 +1077,21 @@ class Music(commands.Cog):
     @commands.command(name="stop", help="Stops radio and leaves the voice channel.", aliases=["leave", "dc", "disconnect"])
     async def stop_command(self, ctx):
         vc: Optional[discord.VoiceClient] = ctx.guild.voice_client # pyrefly: ignore
-        if not vc:
-            return await ctx.send(embed=self.create_embed("ℹ️ Not Connected", "The bot is not in a voice channel.", discord.Color.gold()), delete_after=5)
-
         guild_id = ctx.guild.id
         self.intentional_leaves.add(guild_id)
+        self.stay_connected[guild_id] = False
         self.active_voice_channels.pop(guild_id, None)
-        if guild_id:
+        if guild_id in self.queues:
             self.queues[guild_id] = []
-        vc.stop()
-        await vc.disconnect()
+        if vc:
+            if vc.is_playing() or vc.is_paused():
+                vc.stop()
+            try:
+                await vc.disconnect(force=True)
+            except Exception:
+                pass
         await self.cleanup_session(guild_id)
+        await ctx.send(embed=self.create_embed("⏹️ Radio Stopped", "Stopped the radio stream and disconnected.", discord.Color.dark_grey()), delete_after=6)
         try:
             await ctx.message.delete()
         except Exception:

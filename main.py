@@ -1,6 +1,7 @@
 import os
 import sys
 import asyncio
+import aiohttp
 # pyrefly: ignore [missing-import]
 import discord
 # pyrefly: ignore [missing-import]
@@ -72,18 +73,37 @@ async def main():
     # Start healthcheck web server for 24/7 uptime monitoring
     start_server()
 
+    retry_delay = 5
     while True:
         bot = Bot()
-        async with bot:
-            await bot.start(discord_token)
-            
+        try:
+            async with bot:
+                await bot.start(discord_token)
+        except (discord.ConnectionClosed, discord.GatewayNotFound, aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"[SYS] Connection dropped ({type(e).__name__}: {e}). Reconnecting in {retry_delay}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(int(retry_delay * 1.5), 30)
+            continue
+        except Exception as e:
+            print(f"[SYS] Unexpected bot exception ({type(e).__name__}: {e}). Reconnecting in {retry_delay}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(int(retry_delay * 1.5), 30)
+            continue
+        else:
+            retry_delay = 5
+
         if bot.should_restart:
             print("[SYS] Bot is restarting internally... Please wait.")
             await asyncio.sleep(2)
             continue
         else:
-            break
+            print("[SYS] Bot session disconnected. Reconnecting in 5 seconds...")
+            await asyncio.sleep(5)
+            continue
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("\n[SYS] Bot stopped gracefully.")
