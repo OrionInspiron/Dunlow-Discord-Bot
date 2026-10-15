@@ -568,17 +568,15 @@ class Music(commands.Cog):
         return embed
 
     async def safe_reconnect_vc(self, guild: discord.Guild, channel: discord.VoiceChannel) -> Optional[discord.VoiceClient]:
-        """Safely connects or reconnects to a voice channel with lock guarding and cooldown."""
+        """Safely connects or reconnects to a voice channel with lock guarding."""
         guild_id = guild.id
         lock = self.get_voice_lock(guild_id)
-        if lock.locked():
-            return None
 
         async with lock:
             vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
             # 1. If already connected to target channel, return it
             if vc and vc.is_connected():
-                if vc.channel.id != channel.id:
+                if vc.channel and vc.channel.id != channel.id:
                     try:
                         await vc.move_to(channel)
                     except Exception as e:
@@ -592,7 +590,7 @@ class Music(commands.Cog):
                 except Exception:
                     pass
                 # Allow Discord gateway to process the voice state cleanup
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(1.5)
 
             # 3. Check bot voice permissions in target channel
             perms = channel.permissions_for(guild.me)
@@ -600,9 +598,9 @@ class Music(commands.Cog):
                 print(f"[RADIO] Missing permissions (connect/speak) in {channel.name} ({guild.name})")
                 return None
 
-            # 4. Initiate fresh connection
+            # 4. Initiate fresh connection with full 60s timeout for DAVE key exchange & UDP discovery
             try:
-                new_vc = await channel.connect(timeout=15.0, reconnect=True)
+                new_vc = await channel.connect(timeout=60.0, reconnect=True)
                 self.active_voice_channels[guild_id] = channel.id
                 return new_vc
             except discord.ClientException as e:
@@ -763,19 +761,32 @@ class Music(commands.Cog):
                 await self.cleanup_session(guild_id)
                 return
 
-            target_channel = before.channel
-            print(f"[RADIO] Disconnected from {target_channel.name}. Checking auto-rejoin in 3 seconds (24/7 mode)...")
-            await asyncio.sleep(3.0)
-
-            # If intentional leave happened during sleep, abort
+            # If intentional leave, ignore
             if guild_id in self.intentional_leaves:
                 return
 
+            # Wait 3 seconds to let discord.py auto-reconnect or active connection settle
+            await asyncio.sleep(3.0)
+
+            # Check if discord.py already reconnected itself or is already connected
+            vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
+            if vc and vc.is_connected():
+                if not vc.is_playing() and not vc.is_paused():
+                    self.play_next_song(guild_id)
+                return
+
+            # Check if a reconnection is already in flight
+            lock = self.get_voice_lock(guild_id)
+            if lock.locked():
+                return
+
+            target_channel = before.channel
+            print(f"[RADIO] Recovering 24/7 stream to {target_channel.name} in {guild.name}...")
             new_vc = await self.safe_reconnect_vc(guild, target_channel)
             if new_vc and not new_vc.is_playing() and not new_vc.is_paused():
                 self.play_next_song(guild_id)
 
-    @tasks.loop(seconds=12)
+    @tasks.loop(seconds=20)
     async def radio_watchdog(self):
         """Monitors all 24/7 radio sessions and self-heals any stalled audio or dropped connections."""
         for guild_id, is_247 in list(self.stay_connected.items()):
@@ -788,22 +799,27 @@ class Music(commands.Cog):
 
             vc: Optional[discord.VoiceClient] = guild.voice_client # pyrefly: ignore
 
-            # 1. Bot is in VC and connected, but audio stalled (neither playing nor paused)
+            # 1. Bot is in VC and connected
             if vc and vc.is_connected():
                 if not vc.is_playing() and not vc.is_paused():
                     print(f"[RADIO-WATCHDOG] Detected idle radio in {guild.name}. Resuming stream...")
                     self.play_next_song(guild_id)
+                continue
 
-            # 2. Bot was supposed to stay 24/7, but disconnected from voice channel
-            elif not vc or not vc.is_connected():
-                channel_id = self.active_voice_channels.get(guild_id)
-                if channel_id:
-                    channel = guild.get_channel(channel_id)
-                    if isinstance(channel, discord.VoiceChannel):
-                        print(f"[RADIO-WATCHDOG] Reconnecting 24/7 stream to {channel.name} in {guild.name}...")
-                        new_vc = await self.safe_reconnect_vc(guild, channel)
-                        if new_vc and not new_vc.is_playing() and not new_vc.is_paused():
-                            self.play_next_song(guild_id)
+            # 2. Reconnection is already in progress, avoid duplicate attempts
+            lock = self.get_voice_lock(guild_id)
+            if lock.locked():
+                continue
+
+            # 3. Bot was supposed to stay 24/7, but disconnected from voice channel
+            channel_id = self.active_voice_channels.get(guild_id)
+            if channel_id:
+                channel = guild.get_channel(channel_id)
+                if isinstance(channel, discord.VoiceChannel):
+                    print(f"[RADIO-WATCHDOG] Reconnecting 24/7 stream to {channel.name} in {guild.name}...")
+                    new_vc = await self.safe_reconnect_vc(guild, channel)
+                    if new_vc and not new_vc.is_playing() and not new_vc.is_paused():
+                        self.play_next_song(guild_id)
 
     @radio_watchdog.before_loop
     async def before_watchdog(self):
